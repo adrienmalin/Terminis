@@ -13,7 +13,7 @@ import sched
 import time
 
 # You can change controls here.
-# Acceptable values are printable keys ('q', 'w'...) and curses's constants name starting with "KEY_"
+# Acceptable values are printable characters ('q', 'w'...) and curses's constants name starting with "KEY_"
 # See https://docs.python.org/3/library/curses.html?highlight=curses#constants
 CONTROLS = {
     "MOVE LEFT": "KEY_LEFT",
