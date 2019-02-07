@@ -1,7 +1,7 @@
 # Terminis
 Another Tetris clone... again... but for terminal. Ideal for servers without GUI!
 
-# Screenshot
+## Screenshot
 ```bash
 ┌────────────HOLD───────────┐┌────────────────────┐┌────────────NEXT───────────┐
 │                           ││                    ││                           │
