@@ -11,6 +11,7 @@ except ImportError:
 import random
 import sched
 import time
+import functools
 
 
 # You can change controls here.
@@ -60,14 +61,14 @@ class Rotation:
     
     
 class Color:
-    BLACK = curses.COLOR_BLACK
-    WHITE = curses.COLOR_WHITE
-    YELLOW = curses.COLOR_YELLOW
-    RED = curses.COLOR_RED
-    GREEN = curses.COLOR_GREEN
-    BLUE = curses.COLOR_BLUE
-    MAGENTA = curses.COLOR_MAGENTA
-    CYAN = curses.COLOR_CYAN
+    BLACK = 0
+    WHITE = 1
+    YELLOW = 2
+    RED = 3
+    GREEN = 4
+    BLUE = 5
+    MAGENTA = 6
+    CYAN = 7
     ORANGE = 8
     
 
@@ -94,7 +95,7 @@ class Screen:
             curses.init_pair(Color.RED, curses.COLOR_RED+8, curses.COLOR_RED+8)
             curses.init_pair(Color.GREEN, curses.COLOR_GREEN+8, curses.COLOR_GREEN+8)
             curses.init_pair(Color.YELLOW, curses.COLOR_YELLOW+8, curses.COLOR_YELLOW+8)
-            curses.init_pair(Color.BLUE, curses.COLOR_BLUE, curses.COLOR_BLUE+8)
+            curses.init_pair(Color.BLUE, curses.COLOR_BLUE+8, curses.COLOR_BLUE+8)
             curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA+8, curses.COLOR_MAGENTA+8)
             curses.init_pair(Color.CYAN, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
             curses.init_pair(Color.WHITE, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
@@ -309,8 +310,12 @@ class Window:
         if self.TITLE:
             self.title_begin_x = (width-len(self.TITLE)) // 2 + 1
         self.piece = None
-        self.has_colors = curses.has_colors()
         
+    @property
+    @functools.lru_cache()
+    def has_colors(self):
+        return curses.has_colors()
+    
     def draw_border(self):
         self.window.erase()
         self.window.border()
@@ -343,7 +348,7 @@ class Matrix(Window):
     def __init__(self, game, begin_x, begin_y):
         begin_x += (game.WIDTH - self.WIDTH) // 2
         begin_y += (game.HEIGHT - self.HEIGHT) // 2
-        Window.__init__(self, self.WIDTH, self.HEIGHT, begin_x, begin_y)
+        super().__init__(self.WIDTH, self.HEIGHT, begin_x, begin_y)
         self.game = game
         self.cells = [
             [None for x in range(self.NB_COLS)]
@@ -390,7 +395,7 @@ class Hold(Window):
     PIECE_POSITION = Point(6, 3)
     
     def __init__(self, width, begin_x, begin_y):
-        Window.__init__(self, width, self.HEIGHT, begin_x, begin_y)
+        super().__init__(width, self.HEIGHT, begin_x, begin_y)
         
     def refresh(self, paused=False):
         self.draw_border()
@@ -405,7 +410,7 @@ class Next(Window):
     PIECE_POSITION = Point(6, 3)
     
     def __init__(self, width, begin_x, begin_y):
-        Window.__init__(self, width, self.HEIGHT, begin_x, begin_y)
+        super().__init__(width, self.HEIGHT, begin_x, begin_y)
         self.window = curses.newwin(self.HEIGHT, width, begin_y, begin_x)
         
     def refresh(self, paused=False):
@@ -427,7 +432,7 @@ class Stats(Window):
     TITLE = "STATS"
     
     def __init__(self, width, height, begin_x, begin_y, level):
-        Window.__init__(self, width, height, begin_x, begin_y)
+        super().__init__(width, height, begin_x, begin_y)
         self.width = width
         self.height = height
         self.level = level - 1
@@ -439,7 +444,7 @@ class Stats(Window):
         except:
             self.high_score = 0
         self.time = time.time()
-        self.clock_timer = scheduler.enter(1, 2, self.refresh, tuple())
+        self.clock_timer = scheduler.enter(1, 2, self.refresh)
         self.lines_cleared = 0
         
     def refresh(self):
@@ -669,3 +674,4 @@ def main():
         
 if __name__ == "__main__":
     main()
+    
