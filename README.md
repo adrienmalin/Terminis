@@ -35,7 +35,7 @@ Another Tetris clone... again... but for terminal. Ideal for servers without GUI
   
 ## Dependency
 * Python
-* Python module Curses (native on linux)
+* Python module curses (native on linux)
 
 Can be installed on windows with:
 ```batch
@@ -57,4 +57,4 @@ CONTROLS = {
     "QUIT": "q"
 }
 ```
-Acceptable values are printable keys ('q', 'w'...) and curses's constants name starting with "KEY_" (see [Python documentation](https://docs.python.org/3/library/curses.html?highlight=curses#constants))
+Acceptable values are printable characters ('q', 'w'...) and curses's constants name starting with "KEY_" (see [Python documentation](https://docs.python.org/3/library/curses.html?highlight=curses#constants))
