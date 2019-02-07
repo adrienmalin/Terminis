@@ -12,7 +12,9 @@ import random
 import sched
 import time
 
-
+# You can change controls here.
+# Acceptable values are printable keys ('q', 'w'...) and curses's constants name starting with "KEY_"
+# See https://docs.python.org/3/library/curses.html?highlight=curses#constants
 CONTROLS = {
     "MOVE LEFT": "KEY_LEFT",
     "MOVE RIGHT": "KEY_RIGHT",
@@ -24,7 +26,6 @@ CONTROLS = {
     "PAUSE": "p",
     "QUIT": "q"
 }
-
 
 
 FILE = ".terminis"
@@ -600,11 +601,11 @@ class Game:
         self.next.refresh(paused=True)
         self.scr.nodelay(False)
         while True:
-            key = self.scr.getch()
-            if key == ord('q'):
+            key = self.scr.getkey()
+            if key == CONTROLS["QUIT"]:
                 self.playing = False
                 break
-            elif key == ord('p'):
+            elif key == CONTROLS["PAUSE"]:
                 self.scr.nodelay(True)
                 self.hold.refresh()
                 self.matrix.refresh()
