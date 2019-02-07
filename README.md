@@ -1,6 +1,32 @@
 # Terminis
 Another Tetris clone... again... but for terminal. Ideal for servers without GUI!
 
+# Screenshot
+```bash
+┌────────────HOLD───────────┐┌────────────────────┐┌────────────NEXT───────────┐
+│                           ││                    ││                           │
+│                           ││                    ││                           │
+│                           ││                    ││                           │
+│                           ││                    ││                           │
+└───────────────────────────┘│                    │└───────────────────────────┘
+┌────────────STATS──────────┐│                    │┌──────────CONTROLS─────────┐
+│                           ││                    ││                           │
+│ SCORE 0                   ││                    ││ LEFT  MOVE LEFT           │
+│ HIGH  217812              ││                    ││ RIGHT MOVE RIGHT          │
+│ TIME  00:00:01            ││                    ││ DOWN  SOFT DROP           │
+│ LEVEL 1                   ││                    ││ SPACE HARD DROP           │
+│ GOAL  5                   ││                    ││ UP    ROTATE COUNTER      │
+│ LINES 0                   ││                    ││ *     ROTATE CLOCKWISE    │
+│                           ││                    ││ H     HOLD                │
+│                           ││                    ││ P     PAUSE               │
+│                           ││                    ││ Q     QUIT                │
+│                           ││                    ││                           │
+│                           ││                    ││                           │
+│                           ││                    ││                           │
+│                           ││                    ││                           │
+└───────────────────────────┘└────────────────────┘└───────────────────────────┘
+```
+
 ## Usage
 ```bash
   python terminis.py [level]
