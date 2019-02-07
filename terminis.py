@@ -12,6 +12,7 @@ import random
 import sched
 import time
 
+
 # You can change controls here.
 # Acceptable values are printable characters ('q', 'w'...) and curses's constants name starting with "KEY_"
 # See https://docs.python.org/3/library/curses.html?highlight=curses#constants
@@ -75,7 +76,8 @@ class Screen:
     def __enter__(self):
         self.scr = curses.initscr()
         curses.def_shell_mode()
-        self.init_colors()
+        if curses.has_colors():
+            self.init_colors()
         curses.noecho()
         curses.cbreak()
         self.scr.keypad(True)
@@ -88,23 +90,23 @@ class Screen:
         if curses.COLORS >= 16:
             if curses.can_change_color():
                 curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
-            curses.init_pair(Color.ORANGE, curses.COLOR_BLUE+8, curses.COLOR_YELLOW)
-            curses.init_pair(Color.RED, curses.COLOR_GREEN+8, curses.COLOR_RED+8)
-            curses.init_pair(Color.GREEN, curses.COLOR_RED+8, curses.COLOR_GREEN+8)
-            curses.init_pair(Color.YELLOW, curses.COLOR_MAGENTA+8, curses.COLOR_YELLOW+8)
-            curses.init_pair(Color.BLUE, curses.COLOR_YELLOW, curses.COLOR_BLUE+8)
-            curses.init_pair(Color.MAGENTA, curses.COLOR_YELLOW+8, curses.COLOR_MAGENTA+8)
-            curses.init_pair(Color.CYAN, curses.COLOR_RED+8, curses.COLOR_CYAN+8)
-            curses.init_pair(Color.WHITE, curses.COLOR_BLACK, curses.COLOR_WHITE+8)
+            curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
+            curses.init_pair(Color.RED, curses.COLOR_RED+8, curses.COLOR_RED+8)
+            curses.init_pair(Color.GREEN, curses.COLOR_GREEN+8, curses.COLOR_GREEN+8)
+            curses.init_pair(Color.YELLOW, curses.COLOR_YELLOW+8, curses.COLOR_YELLOW+8)
+            curses.init_pair(Color.BLUE, curses.COLOR_BLUE, curses.COLOR_BLUE+8)
+            curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA+8, curses.COLOR_MAGENTA+8)
+            curses.init_pair(Color.CYAN, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
+            curses.init_pair(Color.WHITE, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
         else:
-            curses.init_pair(Color.ORANGE, curses.COLOR_BLUE, curses.COLOR_YELLOW)
-            curses.init_pair(Color.RED, curses.COLOR_GREEN, curses.COLOR_RED)
-            curses.init_pair(Color.GREEN, curses.COLOR_RED, curses.COLOR_GREEN)
-            curses.init_pair(Color.YELLOW, curses.COLOR_MAGENTA, curses.COLOR_WHITE)
-            curses.init_pair(Color.BLUE, curses.COLOR_YELLOW, curses.COLOR_BLUE)
-            curses.init_pair(Color.MAGENTA, curses.COLOR_YELLOW, curses.COLOR_MAGENTA)
-            curses.init_pair(Color.CYAN, curses.COLOR_RED, curses.COLOR_CYAN)
-            curses.init_pair(Color.WHITE, curses.COLOR_BLACK, curses.COLOR_WHITE)
+            curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
+            curses.init_pair(Color.RED, curses.COLOR_RED, curses.COLOR_RED)
+            curses.init_pair(Color.GREEN, curses.COLOR_GREEN, curses.COLOR_GREEN)
+            curses.init_pair(Color.YELLOW, curses.COLOR_WHITE, curses.COLOR_WHITE)
+            curses.init_pair(Color.BLUE, curses.COLOR_BLUE, curses.COLOR_BLUE)
+            curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA, curses.COLOR_MAGENTA)
+            curses.init_pair(Color.CYAN, curses.COLOR_CYAN, curses.COLOR_CYAN)
+            curses.init_pair(Color.WHITE, curses.COLOR_WHITE, curses.COLOR_WHITE)
 
     def __exit__(self, type, value, traceback):
         curses.nocbreak()
@@ -210,18 +212,18 @@ class Tetromino:
             return False
         
     def fall(self):
-        self.fall_timer = scheduler.enter(self.fall_delay, 2, self.fall)
+        self.fall_timer = scheduler.enter(self.fall_delay, 2, self.fall, tuple())
         return self.move(Movement.DOWN)
     
     def locking(self):
         if not self.lock_timer:
-            self.lock_timer = scheduler.enter(self.lock_delay, 1, self.lock)
+            self.lock_timer = scheduler.enter(self.lock_delay, 1, self.lock, tuple())
             self.matrix.refresh()
             
     def postpone_lock(self):
         if self.lock_timer:
             scheduler.cancel(self.lock_timer)
-            self.lock_timer = scheduler.enter(self.lock_delay, 1, self.lock)
+            self.lock_timer = scheduler.enter(self.lock_delay, 1, self.lock, tuple())
             
     def lock(self):
         self.lock_timer = None
@@ -307,6 +309,7 @@ class Window:
         if self.TITLE:
             self.title_begin_x = (width-len(self.TITLE)) // 2 + 1
         self.piece = None
+        self.has_colors = curses.has_colors()
         
     def draw_border(self):
         self.window.erase()
@@ -323,7 +326,10 @@ class Window:
         
     def show_mino(self, x, y, color):
         if y >= 0:
-            self.window.addstr(y, x*2+1, "  ", curses.color_pair(color))
+            if self.has_colors:
+                self.window.addstr(y, x*2+1, "██", curses.color_pair(color))
+            else:
+                self.window.addstr(y, x*2+1, "██")
         
 
 class Matrix(Window):
@@ -381,7 +387,7 @@ class Matrix(Window):
 class Hold(Window):
     TITLE = "HOLD"
     HEIGHT = 6
-    PIECE_POSITION = Point(6, 2)
+    PIECE_POSITION = Point(6, 3)
     
     def __init__(self, width, begin_x, begin_y):
         Window.__init__(self, width, self.HEIGHT, begin_x, begin_y)
@@ -396,10 +402,10 @@ class Hold(Window):
 class Next(Window):
     TITLE = "NEXT"
     HEIGHT = 6
-    PIECE_POSITION = Point(6, 2)
+    PIECE_POSITION = Point(6, 3)
     
     def __init__(self, width, begin_x, begin_y):
-        super().__init__(width, self.HEIGHT, begin_x, begin_y)
+        Window.__init__(self, width, self.HEIGHT, begin_x, begin_y)
         self.window = curses.newwin(self.HEIGHT, width, begin_y, begin_x)
         
     def refresh(self, paused=False):
@@ -433,7 +439,7 @@ class Stats(Window):
         except:
             self.high_score = 0
         self.time = time.time()
-        self.clock_timer = scheduler.enter(1, 2, self.refresh)
+        self.clock_timer = scheduler.enter(1, 2, self.refresh, tuple())
         self.lines_cleared = 0
         
     def refresh(self):
@@ -449,7 +455,7 @@ class Stats(Window):
         self.window.addstr(6, 2, "GOAL\t%d" % self.goal)
         self.window.addstr(7, 2, "LINES\t%d" % self.lines_cleared)
         self.window.refresh()    
-        self.clock_timer = scheduler.enter(1, 3, self.refresh)
+        self.clock_timer = scheduler.enter(1, 3, self.refresh, tuple())
         
             
     def new_level(self):
@@ -559,7 +565,7 @@ class Game:
             self.next.refresh()
         self.matrix.piece.position = Matrix.PIECE_POSITION
         if self.matrix.piece.move(Movement.STILL, lock=False):
-            self.matrix.piece.fall_timer = scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall)
+            self.matrix.piece.fall_timer = scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
         else:
             self.over()
             
