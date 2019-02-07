@@ -34,7 +34,7 @@ Another Tetris clone... again... but for terminal. Ideal for servers without GUI
   level: integer between 1 and 15
   
 ## Dependency
-* Python 3.3+
+* Python
 * Python module curses (native on linux)
 
 Can be installed on windows with:
