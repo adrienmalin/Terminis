@@ -11,7 +11,6 @@ except ImportError:
 import random
 import sched
 import time
-import functools
 
 
 # You can change controls here.
@@ -29,11 +28,24 @@ CONTROLS = {
     "QUIT": "q"
 }
 
-
 FILE = ".terminis"
-
-
-scheduler = sched.scheduler(time.time, time.sleep)
+    
+    
+class Rotation:
+    CLOCKWISE = 1
+    COUNTERCLOCKWISE = -1
+    
+    
+class Color:
+    BLACK = 0
+    WHITE = 1
+    YELLOW = 2
+    RED = 3
+    GREEN = 4
+    BLUE = 5
+    MAGENTA = 6
+    CYAN = 7
+    ORANGE = 8
 
     
 class Point:
@@ -53,23 +65,6 @@ class Movement:
     RIGHT = Point(1, 0)
     DOWN = Point(0, 1)
     STILL = Point(0, 0)
-    
-    
-class Rotation:
-    CLOCKWISE = 1
-    COUNTERCLOCKWISE = -1
-    
-    
-class Color:
-    BLACK = 0
-    WHITE = 1
-    YELLOW = 2
-    RED = 3
-    GREEN = 4
-    BLUE = 5
-    MAGENTA = 6
-    CYAN = 7
-    ORANGE = 8
     
 
 class Screen:
@@ -98,7 +93,7 @@ class Screen:
             curses.init_pair(Color.BLUE, curses.COLOR_BLUE+8, curses.COLOR_BLUE+8)
             curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA+8, curses.COLOR_MAGENTA+8)
             curses.init_pair(Color.CYAN, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
-            curses.init_pair(Color.WHITE, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
+            curses.init_pair(Color.WHITE, curses.COLOR_WHITE+8, curses.COLOR_WHITE+8)
         else:
             curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
             curses.init_pair(Color.RED, curses.COLOR_RED, curses.COLOR_RED)
@@ -110,11 +105,11 @@ class Screen:
             curses.init_pair(Color.WHITE, curses.COLOR_WHITE, curses.COLOR_WHITE)
 
     def __exit__(self, type, value, traceback):
+        curses.reset_shell_mode()
         curses.nocbreak()
         curses.echo()
         self.scr.keypad(False)
         curses.endwin()
-        curses.reset_shell_mode()
 
 
 class Mino:
@@ -157,6 +152,7 @@ class Tetromino:
         self.rotated_last = False
         self.lock_timer = None
         self.hold_enabled = True
+        self.scheduler = matrix.game.scheduler
     
     def move(self, movement, lock=True):
         potential_position = self.position + movement
@@ -180,7 +176,7 @@ class Tetromino:
         
     def hard_drop(self):
         if self.lock_timer:
-            scheduler.cancel(self.lock_timer)
+            self.scheduler.cancel(self.lock_timer)
             self.lock_timer = None
         lines = 0
         while self.move(Movement.DOWN, lock=False):
@@ -213,24 +209,24 @@ class Tetromino:
             return False
         
     def fall(self):
-        self.fall_timer = scheduler.enter(self.fall_delay, 2, self.fall, tuple())
+        self.fall_timer = self.scheduler.enter(self.fall_delay, 2, self.fall, tuple())
         return self.move(Movement.DOWN)
     
     def locking(self):
         if not self.lock_timer:
-            self.lock_timer = scheduler.enter(self.lock_delay, 1, self.lock, tuple())
+            self.lock_timer = self.scheduler.enter(self.lock_delay, 1, self.lock, tuple())
             self.matrix.refresh()
             
     def postpone_lock(self):
         if self.lock_timer:
-            scheduler.cancel(self.lock_timer)
-            self.lock_timer = scheduler.enter(self.lock_delay, 1, self.lock, tuple())
+            self.scheduler.cancel(self.lock_timer)
+            self.lock_timer = self.scheduler.enter(self.lock_delay, 1, self.lock, tuple())
             
     def lock(self):
         self.lock_timer = None
         if not self.move(Movement.DOWN, lock=False):
             if self.fall_timer:
-                scheduler.cancel(self.fall_timer)
+                self.scheduler.cancel(self.fall_timer)
                 self.fall_timer = None
             if all(self.position.y + mino.position.y <= 0 for mino in self.minoes):
                 self.matrix.game.over()
@@ -307,14 +303,10 @@ class Z(Tetromino):
 class Window:
     def __init__(self, width, height, begin_x, begin_y):
         self.window = curses.newwin(height, width, begin_y, begin_x)
+        self.has_colors = curses.has_colors()
         if self.TITLE:
             self.title_begin_x = (width-len(self.TITLE)) // 2 + 1
         self.piece = None
-        
-    @property
-    @functools.lru_cache()
-    def has_colors(self):
-        return curses.has_colors()
     
     def draw_border(self):
         self.window.erase()
@@ -348,7 +340,7 @@ class Matrix(Window):
     def __init__(self, game, begin_x, begin_y):
         begin_x += (game.WIDTH - self.WIDTH) // 2
         begin_y += (game.HEIGHT - self.HEIGHT) // 2
-        super().__init__(self.WIDTH, self.HEIGHT, begin_x, begin_y)
+        Window.__init__(self, self.WIDTH, self.HEIGHT, begin_x, begin_y)
         self.game = game
         self.cells = [
             [None for x in range(self.NB_COLS)]
@@ -395,7 +387,7 @@ class Hold(Window):
     PIECE_POSITION = Point(6, 3)
     
     def __init__(self, width, begin_x, begin_y):
-        super().__init__(width, self.HEIGHT, begin_x, begin_y)
+        Window.__init__(self, width, self.HEIGHT, begin_x, begin_y)
         
     def refresh(self, paused=False):
         self.draw_border()
@@ -410,7 +402,7 @@ class Next(Window):
     PIECE_POSITION = Point(6, 3)
     
     def __init__(self, width, begin_x, begin_y):
-        super().__init__(width, self.HEIGHT, begin_x, begin_y)
+        Window.__init__(self, width, self.HEIGHT, begin_x, begin_y)
         self.window = curses.newwin(self.HEIGHT, width, begin_y, begin_x)
         
     def refresh(self, paused=False):
@@ -431,8 +423,9 @@ class Stats(Window):
     LINES_CLEARED_NAMES = ("", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS")
     TITLE = "STATS"
     
-    def __init__(self, width, height, begin_x, begin_y, level):
-        super().__init__(width, height, begin_x, begin_y)
+    def __init__(self, game, width, height, begin_x, begin_y, level):
+        Window.__init__(self, width, height, begin_x, begin_y)
+        self.game = game
         self.width = width
         self.height = height
         self.level = level - 1
@@ -444,8 +437,8 @@ class Stats(Window):
         except:
             self.high_score = 0
         self.time = time.time()
-        self.clock_timer = scheduler.enter(1, 2, self.refresh)
         self.lines_cleared = 0
+        self.clock_timer = None
         
     def refresh(self):
         self.draw_border()
@@ -459,8 +452,11 @@ class Stats(Window):
         self.window.addstr(5, 2, "LEVEL\t%d" % self.level)
         self.window.addstr(6, 2, "GOAL\t%d" % self.goal)
         self.window.addstr(7, 2, "LINES\t%d" % self.lines_cleared)
-        self.window.refresh()    
-        self.clock_timer = scheduler.enter(1, 3, self.refresh, tuple())
+        self.window.refresh()
+        
+    def clock(self):
+        self.clock_timer = self.game.scheduler.enter(1, 3, self.clock, tuple())
+        self.refresh()
         
             
     def new_level(self):
@@ -531,6 +527,7 @@ class Game:
     
     def __init__(self, scr, level):
         self.scr = scr
+        self.scheduler = sched.scheduler(time.time, self.process_input)
         self.random_bag = []
         left_x = (curses.COLS-self.WIDTH) // 2
         top_y = (curses.LINES-self.HEIGHT) // 2
@@ -543,7 +540,7 @@ class Game:
         self.hold = Hold(side_width, left_x, top_y)
         self.next = Next(side_width, right_x, top_y)
         self.next.piece = self.random_piece()(self.matrix, Next.PIECE_POSITION)
-        self.stats = Stats(side_width, side_height, left_x, bottom_y, level)
+        self.stats = Stats(self, side_width, side_height, left_x, bottom_y, level)
         self.controls = Controls(side_width, side_height, right_x, bottom_y)
         self.playing = True
         self.paused = False
@@ -570,39 +567,40 @@ class Game:
             self.next.refresh()
         self.matrix.piece.position = Matrix.PIECE_POSITION
         if self.matrix.piece.move(Movement.STILL, lock=False):
-            self.matrix.piece.fall_timer = scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
+            self.matrix.piece.fall_timer = self.scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
         else:
             self.over()
             
-        
     def play(self):
         self.stats.time = time.time()
+        self.stats.clock_timer = self.scheduler.enter(1, 3, self.stats.clock, tuple())
         while self.playing:
-            try:
-                key = self.scr.getkey()
-            except curses.error:
-                pass
-            else:
-                if key == CONTROLS["QUIT"]:
-                    break
-                elif key == CONTROLS["PAUSE"]:
-                    self.pause()
-                elif key == CONTROLS["HOLD"]:
-                    self.swap()
-                elif key == CONTROLS["MOVE LEFT"]:
-                    self.matrix.piece.move(Movement.LEFT)
-                elif key == CONTROLS["MOVE RIGHT"]:
-                    self.matrix.piece.move(Movement.RIGHT)
-                elif key == CONTROLS["SOFT DROP"]:
-                    self.matrix.piece.soft_drop()
-                elif key == CONTROLS["ROTATE COUNTER"]:
-                    self.matrix.piece.rotate(Rotation.COUNTERCLOCKWISE)
-                elif key == CONTROLS["ROTATE CLOCKWISE"]:
-                    self.matrix.piece.rotate(Rotation.CLOCKWISE)
-                elif key == CONTROLS["HARD DROP"]:
-                    self.matrix.piece.hard_drop()
-            finally:
-                scheduler.run(False)
+            self.scheduler.run()
+                
+    def process_input(self, _):
+        try:
+            key = self.scr.getkey()
+        except curses.error:
+            return
+        else:
+            if key == CONTROLS["QUIT"]:
+                self.quit()
+            elif key == CONTROLS["PAUSE"]:
+                self.pause()
+            elif key == CONTROLS["HOLD"]:
+                self.swap()
+            elif key == CONTROLS["MOVE LEFT"]:
+                self.matrix.piece.move(Movement.LEFT)
+            elif key == CONTROLS["MOVE RIGHT"]:
+                self.matrix.piece.move(Movement.RIGHT)
+            elif key == CONTROLS["SOFT DROP"]:
+                self.matrix.piece.soft_drop()
+            elif key == CONTROLS["ROTATE COUNTER"]:
+                self.matrix.piece.rotate(Rotation.COUNTERCLOCKWISE)
+            elif key == CONTROLS["ROTATE CLOCKWISE"]:
+                self.matrix.piece.rotate(Rotation.CLOCKWISE)
+            elif key == CONTROLS["HARD DROP"]:
+                self.matrix.piece.hard_drop()
             
     def pause(self):
         pause_time = time.time()
@@ -614,7 +612,7 @@ class Game:
         while True:
             key = self.scr.getkey()
             if key == CONTROLS["QUIT"]:
-                self.playing = False
+                self.quit()
                 break
             elif key == CONTROLS["PAUSE"]:
                 self.scr.nodelay(True)
@@ -627,10 +625,10 @@ class Game:
     def swap(self):
         if self.matrix.piece.hold_enabled:
             if self.matrix.piece.fall_timer:
-                scheduler.cancel(self.matrix.piece.fall_timer)
+                self.scheduler.cancel(self.matrix.piece.fall_timer)
                 self.matrix.piece.fall_timer = None
             if self.matrix.piece.lock_timer:
-                scheduler.cancel(self.matrix.piece.lock_timer)
+                self.scheduler.cancel(self.matrix.piece.lock_timer)
                 self.matrix.piece.lock_timer = None
             self.matrix.piece, self.hold.piece = self.hold.piece, self.matrix.piece
             self.hold.piece.position = self.hold.PIECE_POSITION
@@ -639,7 +637,6 @@ class Game:
             self.hold.piece.hold_enabled = False
             self.hold.refresh()
             self.new_piece(self.matrix.piece)
-        
             
     def over(self):
         self.playing = False
@@ -648,8 +645,20 @@ class Game:
         self.matrix.window.addstr(11, 9, "OVER", curses.A_BOLD)
         self.matrix.window.refresh()
         self.scr.nodelay(False)
-        while self.scr.getch() != ord('q'):
+        while self.scr.getkey() != CONTROLS["QUIT"]:
             pass
+        
+    def quit(self):
+        self.playing = False
+        if self.matrix.piece.fall_timer:
+            self.scheduler.cancel(self.matrix.piece.fall_timer)
+            self.matrix.piece.fall_timer = None
+        if self.matrix.piece.lock_timer:
+            self.scheduler.cancel(self.matrix.piece.lock_timer)
+            self.matrix.piece.lock_timer = None
+        if self.stats.clock_timer:
+            self.scheduler.cancel(self.stats.clock_timer)
+            self.stats.clock_timer = None
         
 
 def main():
