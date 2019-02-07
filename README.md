@@ -39,7 +39,7 @@ Another Tetris clone... again... but for terminal. Ideal for servers without GUI
 
 Can be installed on windows with:
 ```batch
-  pip install --users windows-curses
+  pip install --user windows-curses
 ```
 
 ## Controls edit
