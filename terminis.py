@@ -151,9 +151,10 @@ class Tetromino:
         self.orientation = 0
         self.rotation_point_5_used = False
         self.rotated_last = False
-        self.lock_timer = None
-        self.hold_enabled = True
         self.scheduler = matrix.game.scheduler
+        self.lock_timer = None
+        self.fall_timer = None
+        self.hold_enabled = True
     
     def move(self, movement, lock=True):
         potential_position = self.position + movement
