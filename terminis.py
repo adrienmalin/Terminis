@@ -11,6 +11,7 @@ except ImportError:
 import random
 import sched
 import time
+import os
 
 
 # You can change controls here.
@@ -28,7 +29,7 @@ CONTROLS = {
     "QUIT": "q"
 }
 
-FILE = ".terminis"
+FILE = os.path.expanduser(os.path.join('~', ".terminis"))
     
     
 class Rotation:
@@ -503,8 +504,11 @@ class Stats(Window):
             self.refresh()
         
     def save(self):
-        with open(FILE, mode='w') as f:
-            f.write(str(self.high_score))
+        try:
+            with open(FILE, mode='w') as f:
+                f.write(str(self.high_score))
+        except:
+            pass
         
         
 class Controls(Window):
@@ -683,4 +687,3 @@ def main():
         
 if __name__ == "__main__":
     main()
-    
