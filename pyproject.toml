@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "terminis"
+version = "0.1.7"
+description = "Tetris clone for terminal. Ideal for servers without GUI!"
+authors = ["adrienmalin <41926238+adrienmalin@users.noreply.github.com>"]
+license = "MIT"
+repository = "https://github.com/adrienmalin/Terminis"
+keywords = ["Tetris", "terminal", "curses"]
+classifiers = [
+    "Environment :: Console :: Curses",
+    "Programming Language :: Python",
+    "Topic :: Games/Entertainment :: Puzzle Games",
+    "Topic :: Games/Entertainment :: Arcade",
+    "Operating System :: OS Independent",
+    "Topic :: Terminals",
+    "Topic :: System :: Systems Administration"
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">2.6"
+windows-curses = {version = "^1.0", platform = "win32"}
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry.scripts]
+terminis = 'terminis.terminis:main'
