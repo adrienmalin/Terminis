@@ -437,11 +437,11 @@ class Stats(Window):
         
     def refresh(self):
         self.draw_border()
+        self.window.addstr(2, 2, "SCORE\t%d" % self.score)
         if self.score >= self.high_score:
-            self.window.addstr(2, 2, "SCORE\t%d" % self.score, curses.A_BOLD|curses.A_BLINK)
+            self.window.addstr(3, 2, "HIGH\t%d" % self.high_score|curses.A_BLINK)
         else:
-            self.window.addstr(2, 2, "SCORE\t%d" % self.score)
-        self.window.addstr(3, 2, "HIGH\t%d" % self.high_score)
+            self.window.addstr(3, 2, "HIGH\t%d" % self.high_score)
         t = time.localtime(time.time() - self.time)
         self.window.addstr(4, 2, "TIME\t%02d:%02d:%02d" % (t.tm_hour-1, t.tm_min, t.tm_sec))
         self.window.addstr(5, 2, "LEVEL\t%d" % self.level)
