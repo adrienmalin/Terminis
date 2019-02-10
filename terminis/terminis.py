@@ -14,15 +14,15 @@ import time
 import os
 import configparser
 
-
-WIN_DIR = "~/Appdata/Roaming/Terminis/"
-LINUX_DIR = "~/.local/share/"
-
-
+DIR_NAME = "Terminis"
 if sys.platform == "win32":
-    dir_path = os.path.expanduser(WIN_DIR)
+    DATA_PATH = os.environ.get("appdata", os.path.expanduser("~\Appdata\Roaming"))
+    CONFIG_PATH = DATA_PATH
 else:
-    dir_path = os.path.expanduser(LINUX_DIR)
+    DATA_PATH = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+    CONFIG_PATH = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+DATA_PATH = os.path.join(DATA_PATH, DIR_NAME)
+CONFIG_PATH = os.path.join(CONFIG_PATH, DIR_NAME)
     
     
 class Rotation:
@@ -413,7 +413,7 @@ class Stats(Window):
     LINES_CLEARED_NAMES = ("", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS")
     TITLE = "STATS"
     FILE_NAME = ".high_score"
-    file_path = os.path.join(dir_path, FILE_NAME)
+    FILE_PATH = os.path.join(DATA_PATH, FILE_NAME)
     
     def __init__(self, game, width, height, begin_x, begin_y, level):
         self.game = game
@@ -430,7 +430,7 @@ class Stats(Window):
         
     def load(self):
         try:
-            with open(self.file_path, "r") as f:
+            with open(self.FILE_PATH, "r") as f:
                 self.high_score = int(f.read())
         except:
             self.high_score = 0
@@ -497,9 +497,11 @@ class Stats(Window):
         else:
             self.refresh()
         
-    def save(self):
+    def save(self):   
+        if not os.path.exists(DATA_PATH):
+            os.mkdir(DATA_PATH)
         try:
-            with open(self.file_path, mode='w') as f:
+            with open(self.FILE_PATH, mode='w') as f:
                 f.write(str(self.high_score))
         except Exception as e:
             print("High score could not be saved:")
@@ -509,7 +511,7 @@ class Stats(Window):
 class Config(Window, configparser.SafeConfigParser):
     TITLE = "CONTROLS"
     FILE_NAME = "config.cfg"
-    file_path = os.path.join(dir_path, FILE_NAME)
+    FILE_PATH = os.path.join(CONFIG_PATH, FILE_NAME)
     
     def __init__(self, width, height, begin_x, begin_y):
         configparser.SafeConfigParser.__init__(self)
@@ -524,16 +526,18 @@ class Config(Window, configparser.SafeConfigParser):
         self.set("CONTROLS", "HOLD", "h")
         self.set("CONTROLS", "PAUSE", "p")
         self.set("CONTROLS", "QUIT", "q")
-        if os.path.exists(self.file_path):
-            self.read(self.file_path)
+        if os.path.exists(self.FILE_PATH):
+            self.read(self.FILE_PATH)
             for action, key in self.items("CONTROLS"):
                 if key == "":
                     self.set("CONTROLS", action, " ")
         else:
+            if not os.path.exists(CONFIG_PATH):
+                os.mkdir(CONFIG_PATH)
             try:
-                with open(self.file_path, 'w') as f:
+                with open(self.FILE_PATH, 'w') as f:
                     f.write(
-"""# Acceptable values are printable characters ("q", "*"...) and curses's constants name starting with "KEY_"
+"""# Acceptable values are printable characters ("q", "*", " "...) and curses's constants name starting with "KEY_"
 # See https://docs.python.org/3/library/curses.html?highlight=curses#constants
 
 """
@@ -704,11 +708,6 @@ def main():
             level = min(15, level)
     else:
         level = 1
-        
-    try:
-        os.mkdir(dir_path)
-    except FileExistsError:
-        pass
         
     with Screen() as scr:
         game = Game(scr, level)

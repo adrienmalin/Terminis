@@ -17,7 +17,7 @@ terminis [level]
 
 You can change keys by editing:
 * `%appdata%\Terminis\config.cfg` on Windows
-* `~/.local/share/Terminis/config.cfg` on Linux
+* `$XDG_CONFIG_HOME/Terminis/config.cfg` or `~/.config/Terminis/config.cfg` on Linux
 
 Acceptable values:
 * printable characters (`q`, `*`, ` `...)
