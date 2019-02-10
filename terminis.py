@@ -80,6 +80,9 @@ class Screen:
         self.scr.keypad(True)
         curses.curs_set(0)
         self.scr.clear()
+        self.scr.nodelay(True)
+        self.scr.leaveok(True)
+        self.scr.getch()
         return self.scr
     
     def init_colors(self):
@@ -318,12 +321,12 @@ class Window:
         
     def draw_piece(self):
         if self.piece:
-            color = Color.WHITE if self.piece.lock_timer else self.piece.COLOR
+            color = Color.WHITE|curses.A_BLINK if self.piece.lock_timer else self.piece.COLOR
             for mino in self.piece.minoes:
                 position = mino.position + self.piece.position
-                self.show_mino(position.x, position.y, color)
+                self.draw_mino(position.x, position.y, color)
         
-    def show_mino(self, x, y, color):
+    def draw_mino(self, x, y, color):
         if y >= 0:
             if self.has_colors:
                 self.window.addstr(y, x*2+1, "██", curses.color_pair(color))
@@ -357,7 +360,7 @@ class Matrix(Window):
             for y, line in enumerate(self.cells):
                 for x, mino in enumerate(line):
                     if mino:
-                        self.show_mino(x, y, mino.color)
+                        self.draw_mino(x, y, mino.color)
             self.draw_piece()
         self.window.refresh()
         
@@ -540,7 +543,6 @@ class Game:
         side_height = self.HEIGHT - Hold.HEIGHT
         right_x = left_x + Matrix.WIDTH + side_width
         bottom_y = top_y + Hold.HEIGHT
-        self.scr.leaveok(True)
         self.matrix = Matrix(self, left_x, top_y)
         self.hold = Hold(side_width, left_x, top_y)
         self.next = Next(side_width, right_x, top_y)
@@ -549,8 +551,6 @@ class Game:
         self.controls = Controls(side_width, side_height, right_x, bottom_y)
         self.playing = True
         self.paused = False
-        self.scr.nodelay(True)
-        self.scr.getch()
         self.hold.refresh()
         self.matrix.refresh()
         self.next.refresh()
@@ -644,7 +644,6 @@ class Game:
             self.new_piece(self.matrix.piece)
             
     def over(self):
-        self.playing = False
         self.matrix.refresh()
         self.matrix.window.addstr(10, 9, "GAME", curses.A_BOLD)
         self.matrix.window.addstr(11, 9, "OVER", curses.A_BOLD)
@@ -652,6 +651,7 @@ class Game:
         self.scr.nodelay(False)
         while self.scr.getkey() != CONTROLS["QUIT"]:
             pass
+        quit()
         
     def quit(self):
         self.playing = False
