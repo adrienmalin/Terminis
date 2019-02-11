@@ -645,7 +645,7 @@ class Game:
             try:
                 key = self.scr.getkey()
             except curses.error:
-                return
+                continue
             else:
                 if key == self.config.get("CONTROLS", "QUIT"):
                     self.quit()
