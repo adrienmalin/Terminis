@@ -12,7 +12,11 @@ import random
 import sched
 import time
 import os
-import configparser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 
 DIR_NAME = "Terminis"
 if sys.platform == "win32":
@@ -50,9 +54,6 @@ class Point:
     def __add__(self, other):
         return Point(self.x+other.x, self.y+other.y)
     
-    def __repr__(self):
-        return "(%d,%d)" % (self.x, self.y)
-    
 
 class Movement:
     LEFT = Point(-1, 0)
@@ -77,6 +78,8 @@ class Screen:
         self.scr.leaveok(True)
         self.scr.getch()
         return self.scr
+        if curses.has_colors():
+            self.init_colors()
     
     def init_colors(self):
         curses.start_color()
@@ -103,9 +106,6 @@ class Screen:
 
     def __exit__(self, type, value, traceback):
         curses.reset_shell_mode()
-        curses.nocbreak()
-        curses.echo()
-        self.scr.keypad(False)
         curses.endwin()
 
 
@@ -439,7 +439,7 @@ class Stats(Window):
         self.draw_border()
         self.window.addstr(2, 2, "SCORE\t%d" % self.score)
         if self.score >= self.high_score:
-            self.window.addstr(3, 2, "HIGH\t%d" % self.high_score|curses.A_BLINK)
+            self.window.addstr(3, 2, "HIGH\t%d" % self.high_score, curses.A_BLINK)
         else:
             self.window.addstr(3, 2, "HIGH\t%d" % self.high_score)
         t = time.localtime(time.time() - self.time)
@@ -565,6 +565,11 @@ class Game:
     
     def __init__(self, scr, level):
         self.scr = scr
+        if curses.has_colors():
+            self.init_colors()
+        self.scr.nodelay(True)
+        curses.curs_set(0)
+        self.scr.getch()
         self.scheduler = sched.scheduler(time.time, self.process_input)
         self.random_bag = []
         left_x = (curses.COLS-self.WIDTH) // 2
@@ -582,7 +587,34 @@ class Game:
         self.playing = True
         self.paused = False
         self.new_piece()
-        
+        try:
+            self.play()
+        except KeyboardInterrupt:
+            self.quit()
+    
+    def init_colors(self):
+        curses.start_color()
+        if curses.COLORS >= 16:
+            if curses.can_change_color():
+                curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
+            curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
+            curses.init_pair(Color.RED, curses.COLOR_RED+8, curses.COLOR_RED+8)
+            curses.init_pair(Color.GREEN, curses.COLOR_GREEN+8, curses.COLOR_GREEN+8)
+            curses.init_pair(Color.YELLOW, curses.COLOR_YELLOW+8, curses.COLOR_YELLOW+8)
+            curses.init_pair(Color.BLUE, curses.COLOR_BLUE+8, curses.COLOR_BLUE+8)
+            curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA+8, curses.COLOR_MAGENTA+8)
+            curses.init_pair(Color.CYAN, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
+            curses.init_pair(Color.WHITE, curses.COLOR_WHITE+8, curses.COLOR_WHITE+8)
+        else:
+            curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
+            curses.init_pair(Color.RED, curses.COLOR_RED, curses.COLOR_RED)
+            curses.init_pair(Color.GREEN, curses.COLOR_GREEN, curses.COLOR_GREEN)
+            curses.init_pair(Color.YELLOW, curses.COLOR_WHITE, curses.COLOR_WHITE)
+            curses.init_pair(Color.BLUE, curses.COLOR_BLUE, curses.COLOR_BLUE)
+            curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA, curses.COLOR_MAGENTA)
+            curses.init_pair(Color.CYAN, curses.COLOR_CYAN, curses.COLOR_CYAN)
+            curses.init_pair(Color.WHITE, curses.COLOR_WHITE, curses.COLOR_WHITE)
+
         
     def random_piece(self):
         if not self.random_bag:
@@ -615,23 +647,23 @@ class Game:
             except curses.error:
                 return
             else:
-                if key == self.config["CONTROLS"]["QUIT"]:
+                if key == self.config.get("CONTROLS", "QUIT"):
                     self.quit()
-                elif key == self.config["CONTROLS"]["PAUSE"]:
+                elif key == self.config.get("CONTROLS", "PAUSE"):
                     self.pause()
-                elif key == self.config["CONTROLS"]["HOLD"]:
+                elif key == self.config.get("CONTROLS", "HOLD"):
                     self.swap()
-                elif key == self.config["CONTROLS"]["MOVE LEFT"]:
+                elif key == self.config.get("CONTROLS", "MOVE LEFT"):
                     self.matrix.piece.move(Movement.LEFT)
-                elif key == self.config["CONTROLS"]["MOVE RIGHT"]:
+                elif key == self.config.get("CONTROLS", "MOVE RIGHT"):
                     self.matrix.piece.move(Movement.RIGHT)
-                elif key == self.config["CONTROLS"]["SOFT DROP"]:
+                elif key == self.config.get("CONTROLS", "SOFT DROP"):
                     self.matrix.piece.soft_drop()
-                elif key == self.config["CONTROLS"]["ROTATE COUNTER"]:
+                elif key == self.config.get("CONTROLS", "ROTATE COUNTER"):
                     self.matrix.piece.rotate(Rotation.COUNTERCLOCKWISE)
-                elif key == self.config["CONTROLS"]["ROTATE CLOCKWISE"]:
+                elif key == self.config.get("CONTROLS", "ROTATE CLOCKWISE"):
                     self.matrix.piece.rotate(Rotation.CLOCKWISE)
-                elif key == self.config["CONTROLS"]["HARD DROP"]:
+                elif key == self.config.get("CONTROLS", "HARD DROP"):
                     self.matrix.piece.hard_drop()
             
     def pause(self):
@@ -643,10 +675,10 @@ class Game:
         self.scr.nodelay(False)
         while True:
             key = self.scr.getkey()
-            if key == self.config["CONTROLS"]["QUIT"]:
+            if key == self.config.get("CONTROLS", "QUIT"):
                 self.quit()
                 break
-            elif key == self.config["CONTROLS"]["PAUSE"]:
+            elif key == self.config.get("CONTROLS", "PAUSE"):
                 self.scr.nodelay(True)
                 self.hold.refresh()
                 self.matrix.refresh()
@@ -676,7 +708,7 @@ class Game:
         self.matrix.window.addstr(11, 9, "OVER", curses.A_BOLD)
         self.matrix.window.refresh()
         self.scr.nodelay(False)
-        while self.scr.getkey() != self.config["CONTROLS"]["QUIT"]:
+        while self.scr.getkey() != self.config.get("CONTROLS", "QUIT"):
             pass
         self.quit()
         
@@ -708,10 +740,8 @@ def main():
             level = min(15, level)
     else:
         level = 1
-        
-    with Screen() as scr:
-        game = Game(scr, level)
-        game.play()
+    
+    curses.wrapper(Game, level)
         
         
 if __name__ == "__main__":
