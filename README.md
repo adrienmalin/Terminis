@@ -8,6 +8,7 @@ pip install --user terminis
 ```
 
 ## Usage
+
 ```bash
 terminis [level]
 ```
