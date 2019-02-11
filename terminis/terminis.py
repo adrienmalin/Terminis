@@ -584,6 +584,17 @@ class Game:
         self.next.piece = self.random_piece()(self.matrix, Next.PIECE_POSITION)
         self.stats = Stats(self, side_width, side_height, left_x, bottom_y, level)
         self.config = Config(side_width, side_height, right_x, bottom_y)
+        self.do_action = {
+            self.config.get("CONTROLS", "QUIT"): self.quit,
+            self.config.get("CONTROLS", "PAUSE"): self.pause,
+            self.config.get("CONTROLS", "HOLD"): self.swap,
+            self.config.get("CONTROLS", "MOVE LEFT"): lambda: self.matrix.piece.move(Movement.LEFT),
+            self.config.get("CONTROLS", "MOVE RIGHT"): lambda: self.matrix.piece.move(Movement.RIGHT),
+            self.config.get("CONTROLS", "SOFT DROP"): lambda: self.matrix.piece.soft_drop(),
+            self.config.get("CONTROLS", "ROTATE COUNTER"): lambda: self.matrix.piece.rotate(Rotation.COUNTERCLOCKWISE),
+            self.config.get("CONTROLS", "ROTATE CLOCKWISE"): lambda: self.matrix.piece.rotate(Rotation.CLOCKWISE),
+            self.config.get("CONTROLS", "HARD DROP"): lambda: self.matrix.piece.hard_drop()
+        }
         self.playing = True
         self.paused = False
         self.new_piece()
@@ -643,28 +654,9 @@ class Game:
         end = time.time() + delay
         while self.playing and time.time() < end:
             try:
-                key = self.scr.getkey()
-            except curses.error:
+                self.do_action[self.scr.getkey()]()
+            except (curses.error, KeyError):
                 continue
-            else:
-                if key == self.config.get("CONTROLS", "QUIT"):
-                    self.quit()
-                elif key == self.config.get("CONTROLS", "PAUSE"):
-                    self.pause()
-                elif key == self.config.get("CONTROLS", "HOLD"):
-                    self.swap()
-                elif key == self.config.get("CONTROLS", "MOVE LEFT"):
-                    self.matrix.piece.move(Movement.LEFT)
-                elif key == self.config.get("CONTROLS", "MOVE RIGHT"):
-                    self.matrix.piece.move(Movement.RIGHT)
-                elif key == self.config.get("CONTROLS", "SOFT DROP"):
-                    self.matrix.piece.soft_drop()
-                elif key == self.config.get("CONTROLS", "ROTATE COUNTER"):
-                    self.matrix.piece.rotate(Rotation.COUNTERCLOCKWISE)
-                elif key == self.config.get("CONTROLS", "ROTATE CLOCKWISE"):
-                    self.matrix.piece.rotate(Rotation.CLOCKWISE)
-                elif key == self.config.get("CONTROLS", "HARD DROP"):
-                    self.matrix.piece.hard_drop()
             
     def pause(self):
         pause_time = time.time()
