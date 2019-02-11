@@ -659,7 +659,7 @@ class Game:
                 continue
             
     def pause(self):
-        pause_time = time.time()
+        self.stats.time = time.time() - self.stats.time
         self.paused = True
         self.hold.refresh(paused=True)
         self.matrix.refresh(paused=True)
@@ -675,7 +675,7 @@ class Game:
                 self.hold.refresh()
                 self.matrix.refresh()
                 self.next.refresh()
-                self.stats.time += time.time() - pause_time
+                self.stats.time = time.time() - self.stats.time
                 break
             
     def swap(self):
