@@ -522,7 +522,7 @@ class Config(Window, configparser.SafeConfigParser):
         self.set("CONTROLS", "SOFT DROP", "KEY_DOWN")
         self.set("CONTROLS", "HARD DROP", " ")
         self.set("CONTROLS", "ROTATE COUNTER", "KEY_UP")
-        self.set("CONTROLS", "ROTATE CLOCKWISE", "*")
+        self.set("CONTROLS", "ROTATE CLOCKWISE", "\n")
         self.set("CONTROLS", "HOLD", "h")
         self.set("CONTROLS", "PAUSE", "p")
         self.set("CONTROLS", "QUIT", "q")
@@ -531,6 +531,8 @@ class Config(Window, configparser.SafeConfigParser):
             for action, key in self.items("CONTROLS"):
                 if key == "":
                     self.set("CONTROLS", action, " ")
+                elif key == "KEY_ENTER":
+                    self.set("CONTROLS", action, "\n")
         else:
             if not os.path.exists(CONFIG_PATH):
                 os.mkdir(CONFIG_PATH)
@@ -553,6 +555,8 @@ class Config(Window, configparser.SafeConfigParser):
         for y, (action, key) in enumerate(self.items("CONTROLS"), start=2):
             if key == " ":
                 key = "SPACE"
+            elif key == "\n":
+                key = "ENTER"
             else:
                 key = key.replace("KEY_", "")
                 key = key.upper()
