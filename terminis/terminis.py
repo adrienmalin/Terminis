@@ -571,8 +571,8 @@ class Game:
         self.scr = scr
         if curses.has_colors():
             self.init_colors()
-        self.scr.nodelay(True)
         curses.curs_set(0)
+        self.scr.timeout(0)
         self.scr.getch()
         self.scheduler = sched.scheduler(time.time, self.process_input)
         self.random_bag = []
@@ -655,12 +655,11 @@ class Game:
             self.scheduler.run()
                 
     def process_input(self, delay):
-        end = time.time() + delay
-        while self.playing and time.time() < end:
-            try:
-                self.do_action[self.scr.getkey()]()
-            except (curses.error, KeyError):
-                continue
+        self.scr.timeout(int(1000*delay))
+        try:
+            self.do_action[self.scr.getkey()]()
+        except (curses.error, KeyError):
+            pass
             
     def pause(self):
         self.stats.time = time.time() - self.stats.time
@@ -668,7 +667,7 @@ class Game:
         self.hold.refresh(paused=True)
         self.matrix.refresh(paused=True)
         self.next.refresh(paused=True)
-        self.scr.nodelay(False)
+        self.scr.timeout(-1)
         while True:
             key = self.scr.getkey()
             if key == self.config.get("CONTROLS", "QUIT"):
@@ -703,7 +702,7 @@ class Game:
         self.matrix.window.addstr(10, 9, "GAME", curses.A_BOLD)
         self.matrix.window.addstr(11, 9, "OVER", curses.A_BOLD)
         self.matrix.window.refresh()
-        self.scr.nodelay(False)
+        self.scr.timeout(-1)
         while self.scr.getkey() != self.config.get("CONTROLS", "QUIT"):
             pass
         self.quit()
