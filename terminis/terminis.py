@@ -478,9 +478,8 @@ class Stats(Window):
             self.score += s
             if self.score > self.high_score:
                 self.high_score = self.score
-            curses.beep()
             if nb_lines == 4 or (nb_lines and t_spin):
-                curses.flash()
+                curses.beep()
             if self.goal <= 0:
                 self.new_level()
             else:
