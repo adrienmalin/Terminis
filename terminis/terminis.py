@@ -12,6 +12,7 @@ import random
 import sched
 import time
 import os
+import locale
 try:
     import configparser
 except ImportError:
@@ -422,31 +423,39 @@ class Stats(Window):
         self.level = level - 1
         self.goal = 0
         self.score = 0
-        self.load()
+        self.high_score = self.load_high_score()
+        self.combo = -1
         self.time = time.time()
         self.lines_cleared = 0
         self.clock_timer = None
+        self.strings = []
+        locale.setlocale(locale.LC_ALL, '')
         Window.__init__(self, width, height, begin_x, begin_y)
+        self.new_level()
         
-    def load(self):
+    def load_high_score(self):
         try:
             with open(self.FILE_PATH, "r") as f:
-                self.high_score = int(f.read())
+               return int(f.read())
         except:
-            self.high_score = 0
+            return 0
         
     def refresh(self):
         self.draw_border()
-        self.window.addstr(2, 2, "SCORE\t%d" % self.score)
+        self.window.addstr(2, 2, "SCORE\t{:n}".format(self.score))
         if self.score >= self.high_score:
-            self.window.addstr(3, 2, "HIGH\t%d" % self.high_score, curses.A_BLINK)
+            self.window.addstr(3, 2, "HIGH\t{:n}".format(self.high_score), curses.A_BLINK|curses.A_BOLD)
         else:
-            self.window.addstr(3, 2, "HIGH\t%d" % self.high_score)
+            self.window.addstr(3, 2, "HIGH\t{:n}".format(self.high_score))
         t = time.localtime(time.time() - self.time)
         self.window.addstr(4, 2, "TIME\t%02d:%02d:%02d" % (t.tm_hour-1, t.tm_min, t.tm_sec))
         self.window.addstr(5, 2, "LEVEL\t%d" % self.level)
         self.window.addstr(6, 2, "GOAL\t%d" % self.goal)
         self.window.addstr(7, 2, "LINES\t%d" % self.lines_cleared)
+        y0 = self.height - len(self.strings) - 2
+        for y, string in enumerate(self.strings, start=y0):          
+            x = (self.width-len(string)) // 2 + 1
+            self.window.addstr(y, x, string)
         self.window.refresh()
         
     def clock(self):
@@ -470,29 +479,32 @@ class Stats(Window):
         self.refresh()
         
     def piece_locked(self, nb_lines, t_spin):
+        self.strings = []
+        if t_spin:
+            self.strings.append(t_spin)
+        if nb_lines:
+            self.strings.append(self.LINES_CLEARED_NAMES[nb_lines])
+            self.combo += 1
+        else:
+            self.combo = -1
         if nb_lines or t_spin:
             self.lines_cleared += nb_lines
-            s = self.SCORES[nb_lines][t_spin]
-            self.goal -= s
-            s *= 100 * self.level
-            self.score += s
-            if self.score > self.high_score:
-                self.high_score = self.score
-            if nb_lines == 4 or (nb_lines and t_spin):
-                curses.beep()
-            if self.goal <= 0:
-                self.new_level()
-            else:
-                self.refresh()
-            x = (self.width-len(t_spin)) // 2 + 1
-            self.window.addstr(self.height-5, x, t_spin)
-            name = self.LINES_CLEARED_NAMES[nb_lines]
-            x = (self.width-len(name)) // 2 + 1
-            self.window.addstr(self.height-4, x, name)
-            s = str(s)
-            x = (self.width-len(s)) // 2 + 1
-            self.window.addstr(self.height-3, x, s)
-            self.window.refresh()
+            ds = self.SCORES[nb_lines][t_spin]
+            self.goal -= ds
+            ds *= 100 * self.level
+            self.score += ds
+            self.strings.append(str(ds))
+        if self.combo >= 1:
+            self.strings.append("COMBO x%d" % self.combo)
+            ds = (20 if nb_lines==1 else 50) * self.combo * self.level
+            self.score += ds
+            self.strings.append(str(ds))
+        if nb_lines == 4 or (nb_lines and t_spin):
+            curses.beep()
+        if self.score > self.high_score:
+            self.high_score = self.score
+        if self.goal <= 0:
+            self.new_level()
         else:
             self.refresh()
         
@@ -519,27 +531,26 @@ class Config(Window, configparser.SafeConfigParser):
         self.set("CONTROLS", "MOVE LEFT", "KEY_LEFT")
         self.set("CONTROLS", "MOVE RIGHT", "KEY_RIGHT")
         self.set("CONTROLS", "SOFT DROP", "KEY_DOWN")
-        self.set("CONTROLS", "HARD DROP", " ")
+        self.set("CONTROLS", "HARD DROP", "SPACE")
         self.set("CONTROLS", "ROTATE COUNTER", "KEY_UP")
-        self.set("CONTROLS", "ROTATE CLOCKWISE", "\n")
+        self.set("CONTROLS", "ROTATE CLOCKWISE", "ENTER")
         self.set("CONTROLS", "HOLD", "h")
         self.set("CONTROLS", "PAUSE", "p")
         self.set("CONTROLS", "QUIT", "q")
         if os.path.exists(self.FILE_PATH):
             self.read(self.FILE_PATH)
-            for action, key in self.items("CONTROLS"):
-                if key == "":
-                    self.set("CONTROLS", action, " ")
-                elif key == "KEY_ENTER":
-                    self.set("CONTROLS", action, "\n")
         else:
             if not os.path.exists(CONFIG_PATH):
                 os.mkdir(CONFIG_PATH)
             try:
                 with open(self.FILE_PATH, 'w') as f:
                     f.write(
-"""# Acceptable values are printable characters ("q", "*", " "...) and curses's constants name starting with "KEY_"
-# See https://docs.python.org/3/library/curses.html?highlight=curses#constants
+"""# You can change key below.
+# Acceptable values are:
+# * `SPACE`, `TAB`, `ENTER`
+# * printable characters (`q`, `*`...)
+# * curses's constants name starting with `KEY_`
+#   See https://docs.python.org/3/library/curses.html?highlight=curses#constants
 
 """
 )
@@ -548,6 +559,13 @@ class Config(Window, configparser.SafeConfigParser):
                 print("Configuration could not be saved:")
                 print(e)
         Window.__init__(self, width, height, begin_x, begin_y)
+        for action, key in self.items("CONTROLS"):
+            if key == "SPACE":
+                self.set("CONTROLS", action, " ")
+            elif key == "ENTER":
+                self.set("CONTROLS", action, "\n")
+            elif key == "TAB":
+                self.set("CONTROLS", action, "\t")
     
     def refresh(self):
         self.draw_border()
@@ -570,7 +588,10 @@ class Game:
         self.scr = scr
         if curses.has_colors():
             self.init_colors()
-        curses.curs_set(0)
+        try:
+            curses.curs_set(0)
+        except curses.error:
+            pass
         self.scr.timeout(0)
         self.scr.getch()
         self.scheduler = sched.scheduler(time.time, self.process_input)

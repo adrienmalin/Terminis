@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "terminis"
-version = "0.1.8"
+version = "0.1.9"
 description = "Tetris clone for terminal. Ideal for servers without GUI!"
 authors = ["adrienmalin <41926238+adrienmalin@users.noreply.github.com>"]
 license = "MIT"

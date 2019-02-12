@@ -19,7 +19,3 @@ terminis [level]
 You can change keys by editing:
 * `%appdata%\Terminis\config.cfg` on Windows
 * `$XDG_CONFIG_HOME/Terminis/config.cfg` or `~/.config/Terminis/config.cfg` on Linux
-
-Acceptable values:
-* printable characters (`q`, `*`, ` `...)
-* curses's constants name starting with `KEY_` (see [Python documentation](https://docs.python.org/3/library/curses.html?highlight=curses#constants))
