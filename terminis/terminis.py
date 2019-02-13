@@ -572,13 +572,7 @@ class Config(Window, configparser.SafeConfigParser):
     def refresh(self):
         self.draw_border()
         for y, (action, key) in enumerate(self.items("CONTROLS"), start=2):
-            if key == " ":
-                key = "SPACE"
-            elif key == "\n":
-                key = "ENTER"
-            else:
-                key = key.replace("KEY_", "")
-                key = key.upper()
+            key = key.replace("KEY_", "")
             self.window.addstr(y, 2, "%s\t%s" % (key, action.upper()))
         self.window.refresh()
 
