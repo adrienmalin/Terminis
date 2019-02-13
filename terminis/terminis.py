@@ -213,7 +213,7 @@ class Tetromino:
         
     def fall(self):
         self.fall_timer = self.scheduler.enter(self.fall_delay, 2, self.fall, tuple())
-        return self.move(Movement.DOWN)
+        self.move(Movement.DOWN)
     
     def locking(self):
         if not self.lock_timer:
