@@ -589,28 +589,54 @@ class Game:
     
     def __init__(self, scr, level):
         self.scr = scr
+        
         if curses.has_colors():
-            self.init_colors()
+            curses.start_color()
+            if curses.COLORS >= 16:
+                if curses.can_change_color():
+                    curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
+                curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
+                curses.init_pair(Color.RED, curses.COLOR_RED+8, curses.COLOR_RED+8)
+                curses.init_pair(Color.GREEN, curses.COLOR_GREEN+8, curses.COLOR_GREEN+8)
+                curses.init_pair(Color.YELLOW, curses.COLOR_YELLOW+8, curses.COLOR_YELLOW+8)
+                curses.init_pair(Color.BLUE, curses.COLOR_BLUE+8, curses.COLOR_BLUE+8)
+                curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA+8, curses.COLOR_MAGENTA+8)
+                curses.init_pair(Color.CYAN, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
+                curses.init_pair(Color.WHITE, curses.COLOR_WHITE+8, curses.COLOR_WHITE+8)
+            else:
+                curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
+                curses.init_pair(Color.RED, curses.COLOR_RED, curses.COLOR_RED)
+                curses.init_pair(Color.GREEN, curses.COLOR_GREEN, curses.COLOR_GREEN)
+                curses.init_pair(Color.YELLOW, curses.COLOR_WHITE, curses.COLOR_WHITE)
+                curses.init_pair(Color.BLUE, curses.COLOR_BLUE, curses.COLOR_BLUE)
+                curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA, curses.COLOR_MAGENTA)
+                curses.init_pair(Color.CYAN, curses.COLOR_CYAN, curses.COLOR_CYAN)
+                curses.init_pair(Color.WHITE, curses.COLOR_WHITE, curses.COLOR_WHITE)
+        
         try:
             curses.curs_set(0)
         except curses.error:
             pass
+        
         self.scr.timeout(0)
         self.scr.getch()
         self.scheduler = sched.scheduler(time.time, self.process_input)
         self.random_bag = []
+        
         left_x = (curses.COLS-self.WIDTH) // 2
         top_y = (curses.LINES-self.HEIGHT) // 2
         side_width = (self.WIDTH - Matrix.WIDTH) // 2
         side_height = self.HEIGHT - Hold.HEIGHT
         right_x = left_x + Matrix.WIDTH + side_width
         bottom_y = top_y + Hold.HEIGHT
+        
         self.matrix = Matrix(self, left_x, top_y)
         self.hold = Hold(side_width, left_x, top_y)
         self.next = Next(side_width, right_x, top_y)
         self.next.piece = self.random_piece()(self.matrix, Next.PIECE_POSITION)
         self.stats = Stats(self, side_width, side_height, left_x, bottom_y, level)
         self.config = Config(side_width, side_height, right_x, bottom_y)
+        
         self.do_action = {
             self.config.get("CONTROLS", "QUIT"): self.quit,
             self.config.get("CONTROLS", "PAUSE"): self.pause,
@@ -622,36 +648,17 @@ class Game:
             self.config.get("CONTROLS", "ROTATE CLOCKWISE"): lambda: self.matrix.piece.rotate(Rotation.CLOCKWISE),
             self.config.get("CONTROLS", "HARD DROP"): lambda: self.matrix.piece.hard_drop()
         }
+        
         self.playing = True
         self.paused = False
         self.new_piece()
+        self.stats.time = time.time()
+        self.stats.clock_timer = self.scheduler.enter(1, 3, self.stats.clock, tuple())
+        
         try:
-            self.play()
+            self.scheduler.run()
         except KeyboardInterrupt:
             self.quit()
-    
-    def init_colors(self):
-        curses.start_color()
-        if curses.COLORS >= 16:
-            if curses.can_change_color():
-                curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
-            curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
-            curses.init_pair(Color.RED, curses.COLOR_RED+8, curses.COLOR_RED+8)
-            curses.init_pair(Color.GREEN, curses.COLOR_GREEN+8, curses.COLOR_GREEN+8)
-            curses.init_pair(Color.YELLOW, curses.COLOR_YELLOW+8, curses.COLOR_YELLOW+8)
-            curses.init_pair(Color.BLUE, curses.COLOR_BLUE+8, curses.COLOR_BLUE+8)
-            curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA+8, curses.COLOR_MAGENTA+8)
-            curses.init_pair(Color.CYAN, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
-            curses.init_pair(Color.WHITE, curses.COLOR_WHITE+8, curses.COLOR_WHITE+8)
-        else:
-            curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
-            curses.init_pair(Color.RED, curses.COLOR_RED, curses.COLOR_RED)
-            curses.init_pair(Color.GREEN, curses.COLOR_GREEN, curses.COLOR_GREEN)
-            curses.init_pair(Color.YELLOW, curses.COLOR_WHITE, curses.COLOR_WHITE)
-            curses.init_pair(Color.BLUE, curses.COLOR_BLUE, curses.COLOR_BLUE)
-            curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA, curses.COLOR_MAGENTA)
-            curses.init_pair(Color.CYAN, curses.COLOR_CYAN, curses.COLOR_CYAN)
-            curses.init_pair(Color.WHITE, curses.COLOR_WHITE, curses.COLOR_WHITE)
 
         
     def random_piece(self):
@@ -670,12 +677,6 @@ class Game:
             self.matrix.piece.fall_timer = self.scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
         else:
             self.over()
-            
-    def play(self):
-        self.stats.time = time.time()
-        self.stats.clock_timer = self.scheduler.enter(1, 3, self.stats.clock, tuple())
-        while self.playing:
-            self.scheduler.run()
                 
     def process_input(self, delay):
         self.scr.timeout(int(1000*delay))
