@@ -29,6 +29,9 @@ else:
 DATA_PATH = os.path.join(DATA_PATH, DIR_NAME)
 CONFIG_PATH = os.path.join(CONFIG_PATH, DIR_NAME)
     
+
+locale.setlocale(locale.LC_ALL, '')
+        
     
 class Rotation:
     CLOCKWISE = 1
@@ -429,7 +432,6 @@ class Stats(Window):
         self.lines_cleared = 0
         self.clock_timer = None
         self.strings = []
-        locale.setlocale(locale.LC_ALL, '')
         Window.__init__(self, width, height, begin_x, begin_y)
         self.new_level()
         
