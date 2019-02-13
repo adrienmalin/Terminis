@@ -621,7 +621,7 @@ class Game:
         self.scr.timeout(0)
         self.scr.getch()
         
-        self.scheduler = sched.scheduler(time.time, time.sleep)
+        self.scheduler = sched.scheduler(time.time, lambda delay: curses.napms(int(delay*1000)))
         self.random_bag = []
         
         left_x = (curses.COLS-self.WIDTH) // 2
