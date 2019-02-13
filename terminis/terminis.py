@@ -620,6 +620,7 @@ class Game:
         
         self.scr.timeout(0)
         self.scr.getch()
+        
         self.scheduler = sched.scheduler(time.time, self.process_input)
         self.random_bag = []
         
@@ -651,9 +652,9 @@ class Game:
         
         self.playing = True
         self.paused = False
-        self.new_piece()
         self.stats.time = time.time()
         self.stats.clock_timer = self.scheduler.enter(1, 3, self.stats.clock, tuple())
+        self.new_piece()
         
         try:
             self.scheduler.run()
