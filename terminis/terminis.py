@@ -468,9 +468,8 @@ class Stats(Window):
             
     def new_level(self):
         self.level += 1
-        if self.level <= 15:
-            Tetromino.fall_delay = pow(0.8 - ((self.level-1)*0.007), self.level-1)
-        else:
+        Tetromino.fall_delay = pow(0.8 - ((self.level-1)*0.007), self.level-1)
+        if self.level > 15:
             Tetromino.lock_delay = 0.5 * pow(0.9, self.level-15)
         self.goal += 5 * self.level
         self.refresh()
@@ -586,6 +585,7 @@ class Config(Window, configparser.SafeConfigParser):
 class Game:
     WIDTH = 80
     HEIGHT = Matrix.HEIGHT
+    AUTOREPEAT_DELAY = 0.02
     
     def __init__(self, scr, level):
         self.scr = scr
@@ -621,7 +621,7 @@ class Game:
         self.scr.timeout(0)
         self.scr.getch()
         
-        self.scheduler = sched.scheduler(time.time, self.process_input)
+        self.scheduler = sched.scheduler(time.time, time.sleep)
         self.random_bag = []
         
         left_x = (curses.COLS-self.WIDTH) // 2
@@ -655,6 +655,7 @@ class Game:
         self.stats.time = time.time()
         self.stats.clock_timer = self.scheduler.enter(1, 3, self.stats.clock, tuple())
         self.new_piece()
+        self.input_timer = self.scheduler.enter(self.AUTOREPEAT_DELAY, 2, self.process_input, tuple())
         
         try:
             self.scheduler.run()
@@ -679,8 +680,8 @@ class Game:
         else:
             self.over()
                 
-    def process_input(self, delay):
-        self.scr.timeout(int(1000*delay))
+    def process_input(self):
+        self.input_timer = self.scheduler.enter(self.AUTOREPEAT_DELAY, 2, self.process_input, tuple())
         try:
             self.do_action[self.scr.getkey()]()
         except (curses.error, KeyError):
@@ -699,7 +700,7 @@ class Game:
                 self.quit()
                 break
             elif key == self.config.get("CONTROLS", "PAUSE"):
-                self.scr.nodelay(True)
+                self.scr.timeout(0)
                 self.hold.refresh()
                 self.matrix.refresh()
                 self.next.refresh()
@@ -743,6 +744,8 @@ class Game:
         if self.stats.clock_timer:
             self.scheduler.cancel(self.stats.clock_timer)
             self.stats.clock_timer = None
+        if self.input_timer:
+            self.scheduler.cancel(self.input_timer)
         self.stats.save()
         
 
