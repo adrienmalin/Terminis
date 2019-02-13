@@ -30,9 +30,9 @@ DATA_PATH = os.path.join(DATA_PATH, DIR_NAME)
 CONFIG_PATH = os.path.join(CONFIG_PATH, DIR_NAME)
     
 
-os.environ["NCURSES_NO_UTF8_ACS"] = "1"
 locale.setlocale(locale.LC_ALL, '')
-        
+if locale.getpreferredencoding() == 'UTF-8':
+    os.environ["NCURSES_NO_UTF8_ACS"] = "1"
     
 class Rotation:
     CLOCKWISE = 1
