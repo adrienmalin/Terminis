@@ -572,7 +572,7 @@ class Config(Window, configparser.SafeConfigParser):
     def refresh(self):
         self.draw_border()
         for y, (action, key) in enumerate(self.items("CONTROLS"), start=2):
-            key = key.replace("KEY_", "")
+            key = key.replace("KEY_", "").upper()
             self.window.addstr(y, 2, "%s\t%s" % (key, action.upper()))
         self.window.refresh()
 
@@ -632,7 +632,7 @@ class Game:
         self.stats = Stats(self, side_width, side_height, left_x, bottom_y, level)
         self.config = Config(side_width, side_height, right_x, bottom_y)
         
-        self.do_action = {
+        self.actions = {
             self.config.get("CONTROLS", "QUIT"): self.quit,
             self.config.get("CONTROLS", "PAUSE"): self.pause,
             self.config.get("CONTROLS", "HOLD"): self.swap,
@@ -677,9 +677,11 @@ class Game:
     def process_input(self):
         self.input_timer = self.scheduler.enter(self.AUTOREPEAT_DELAY, 2, self.process_input, tuple())
         try:
-            self.do_action[self.scr.getkey()]()
+            action = self.actions[self.scr.getkey()]
         except (curses.error, KeyError):
             pass
+        else:
+            action()
             
     def pause(self):
         self.stats.time = time.time() - self.stats.time
