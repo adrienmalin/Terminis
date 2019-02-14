@@ -492,20 +492,21 @@ class Controls(Window, configparser.SafeConfigParser):
         DIR_PATH = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
     DIR_PATH = os.path.join(DIR_PATH, DIR_NAME)
     FILE_PATH = os.path.join(DIR_PATH, FILE_NAME)
+    SECTION = "CONTROLS"
 
     def __init__(self, width, height, begin_x, begin_y):
         configparser.SafeConfigParser.__init__(self)
         self.optionxform = str
-        self.add_section("CONTROLS")
-        self.set("CONTROLS", "MOVE LEFT", "KEY_LEFT")
-        self.set("CONTROLS", "MOVE RIGHT", "KEY_RIGHT")
-        self.set("CONTROLS", "SOFT DROP", "KEY_DOWN")
-        self.set("CONTROLS", "HARD DROP", "SPACE")
-        self.set("CONTROLS", "ROTATE COUNTER", "KEY_UP")
-        self.set("CONTROLS", "ROTATE CLOCKWISE", "ENTER")
-        self.set("CONTROLS", "HOLD", "h")
-        self.set("CONTROLS", "PAUSE", "p")
-        self.set("CONTROLS", "QUIT", "q")
+        self.add_section(self.SECTION)
+        self["MOVE LEFT"] = "KEY_LEFT"
+        self["MOVE RIGHT"] = "KEY_RIGHT"
+        self["SOFT DROP"] = "KEY_DOWN"
+        self["HARD DROP"] = "SPACE"
+        self["ROTATE COUNTER"] = "KEY_UP"
+        self["ROTATE CLOCKWISE"] = "ENTER"
+        self["HOLD"] = "h"
+        self["PAUSE"] = "p"
+        self["QUIT"] = "q"
         if os.path.exists(self.FILE_PATH):
             self.read(self.FILE_PATH)
         else:
@@ -528,13 +529,13 @@ class Controls(Window, configparser.SafeConfigParser):
                 print("Configuration could not be saved:")
                 print(e)
         Window.__init__(self, width, height, begin_x, begin_y)
-        for action, key in self.items("CONTROLS"):
+        for action, key in self.items(self.SECTION):
             if key == "SPACE":
-                self.set("CONTROLS", action, " ")
+                self[action] = " "
             elif key == "ENTER":
-                self.set("CONTROLS", action, "\n")
+                self[action] = "\n"
             elif key == "TAB":
-                self.set("CONTROLS", action, "\t")
+                self[action] = "\t"
 
     def refresh(self):
         self.draw_border()
@@ -544,7 +545,10 @@ class Controls(Window, configparser.SafeConfigParser):
         self.window.refresh()
 
     def __getitem__(self, key):
-        return self.get("CONTROLS", key)
+        return self.get(self.SECTION, key)
+    
+    def __setitem__(self, key, value):
+        self.set(self.SECTION, key, value)
 
 
 class Game:
