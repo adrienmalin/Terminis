@@ -546,6 +546,7 @@ class Controls(Window, configparser.SafeConfigParser):
     def __getitem__(self, key):
         return self.get("CONTROLS", key)
 
+
 class Game:
     WIDTH = 80
     HEIGHT = Matrix.HEIGHT
