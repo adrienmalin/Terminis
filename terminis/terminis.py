@@ -455,8 +455,8 @@ class Stats(Window):
         self.window.addstr(5, 2, "LEVEL\t%d" % self.level)
         self.window.addstr(6, 2, "GOAL\t%d" % self.goal)
         self.window.addstr(7, 2, "LINES\t%d" % self.lines_cleared)
-        y0 = self.height - len(self.strings) - 2
-        for y, string in enumerate(self.strings, start=y0):          
+        start_y = self.height - len(self.strings) - 2
+        for y, string in enumerate(self.strings, start=start_y):          
             x = (self.width-len(string)) // 2 + 1
             self.window.addstr(y, x, string)
         self.window.refresh()
