@@ -20,20 +20,13 @@ except ImportError:
 
 
 DIR_NAME = "Terminis"
-if sys.platform == "win32":
-    DATA_PATH = os.environ.get("appdata", os.path.expanduser("~\Appdata\Roaming"))
-    CONFIG_PATH = DATA_PATH
-else:
-    DATA_PATH = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
-    CONFIG_PATH = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
-DATA_PATH = os.path.join(DATA_PATH, DIR_NAME)
-CONFIG_PATH = os.path.join(CONFIG_PATH, DIR_NAME)
     
 
 locale.setlocale(locale.LC_ALL, '')
 if locale.getpreferredencoding() == 'UTF-8':
     os.environ["NCURSES_NO_UTF8_ACS"] = "1"
-    
+
+
 class Rotation:
     CLOCKWISE = 1
     COUNTERCLOCKWISE = -1
@@ -418,7 +411,12 @@ class Stats(Window):
     LINES_CLEARED_NAMES = ("", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS")
     TITLE = "STATS"
     FILE_NAME = ".high_score"
-    FILE_PATH = os.path.join(DATA_PATH, FILE_NAME)
+    if sys.platform == "win32":
+        DIR_PATH = os.environ.get("appdata", os.path.expanduser("~\Appdata\Roaming"))
+    else:
+        DIR_PATH = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+    DIR_PATH = os.path.join(DIR_PATH, DIR_NAME)
+    FILE_PATH = os.path.join(DIR_PATH, FILE_NAME)
     
     def __init__(self, game, width, height, begin_x, begin_y, level):
         self.game = game
@@ -511,8 +509,8 @@ class Stats(Window):
             self.refresh()
         
     def save(self):   
-        if not os.path.exists(DATA_PATH):
-            os.mkdir(DATA_PATH)
+        if not os.path.exists(DIR_PATH):
+            os.mkdir(DIR_PATH)
         try:
             with open(self.FILE_PATH, mode='w') as f:
                 f.write(str(self.high_score))
@@ -524,7 +522,12 @@ class Stats(Window):
 class Config(Window, configparser.SafeConfigParser):
     TITLE = "CONTROLS"
     FILE_NAME = "config.cfg"
-    FILE_PATH = os.path.join(CONFIG_PATH, FILE_NAME)
+    if sys.platform == "win32":
+        DIR_PATH = os.environ.get("appdata", os.path.expanduser("~\Appdata\Roaming"))
+    else:
+        DIR_PATH = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+    DIR_PATH = os.path.join(DIR_PATH, DIR_NAME)
+    FILE_PATH = os.path.join(DIR_PATH, FILE_NAME)
     
     def __init__(self, width, height, begin_x, begin_y):
         configparser.SafeConfigParser.__init__(self)
@@ -542,8 +545,8 @@ class Config(Window, configparser.SafeConfigParser):
         if os.path.exists(self.FILE_PATH):
             self.read(self.FILE_PATH)
         else:
-            if not os.path.exists(CONFIG_PATH):
-                os.mkdir(CONFIG_PATH)
+            if not os.path.exists(self.DIR_PATH):
+                os.mkdir(self.DIR_PATH)
             try:
                 with open(self.FILE_PATH, 'w') as f:
                     f.write(
