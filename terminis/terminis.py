@@ -25,6 +25,8 @@ DIR_NAME = "Terminis"
 locale.setlocale(locale.LC_ALL, '')
 if locale.getpreferredencoding() == 'UTF-8':
     os.environ["NCURSES_NO_UTF8_ACS"] = "1"
+    
+scheduler = sched.scheduler(time.time, lambda delay: curses.napms(int(delay*1000)))
 
 
 class Rotation:
@@ -145,7 +147,6 @@ class Tetromino:
         self.orientation = 0
         self.rotation_point_5_used = False
         self.rotated_last = False
-        self.scheduler = matrix.game.scheduler
         self.lock_timer = None
         self.fall_timer = None
         self.hold_enabled = True
@@ -172,7 +173,7 @@ class Tetromino:
         
     def hard_drop(self):
         if self.lock_timer:
-            self.scheduler.cancel(self.lock_timer)
+            scheduler.cancel(self.lock_timer)
             self.lock_timer = None
         lines = 0
         while self.move(Movement.DOWN, lock=False):
@@ -205,24 +206,24 @@ class Tetromino:
             return False
         
     def fall(self):
-        self.fall_timer = self.scheduler.enter(self.fall_delay, 2, self.fall, tuple())
+        self.fall_timer = scheduler.enter(self.fall_delay, 2, self.fall, tuple())
         self.move(Movement.DOWN)
     
     def locking(self):
         if not self.lock_timer:
-            self.lock_timer = self.scheduler.enter(self.lock_delay, 1, self.lock, tuple())
+            self.lock_timer = scheduler.enter(self.lock_delay, 1, self.lock, tuple())
             self.matrix.refresh()
             
     def postpone_lock(self):
         if self.lock_timer:
-            self.scheduler.cancel(self.lock_timer)
-            self.lock_timer = self.scheduler.enter(self.lock_delay, 1, self.lock, tuple())
+            scheduler.cancel(self.lock_timer)
+            self.lock_timer = scheduler.enter(self.lock_delay, 1, self.lock, tuple())
             
     def lock(self):
         self.lock_timer = None
         if not self.move(Movement.DOWN, lock=False):
             if self.fall_timer:
-                self.scheduler.cancel(self.fall_timer)
+                scheduler.cancel(self.fall_timer)
                 self.fall_timer = None
             if all(self.position.y + mino.position.y <= 0 for mino in self.minoes):
                 self.matrix.game.over()
@@ -418,14 +419,32 @@ class Stats(Window):
     DIR_PATH = os.path.join(DIR_PATH, DIR_NAME)
     FILE_PATH = os.path.join(DIR_PATH, FILE_NAME)
     
-    def __init__(self, game, width, height, begin_x, begin_y, level):
+    def __init__(self, game, width, height, begin_x, begin_y):
+        if len(sys.argv) >= 2:
+            try:
+                self.level = int(sys.argv[1])
+            except ValueError:
+                print("Usage:")
+                print("python terminis.py [level]")
+                print("  level: integer between 1 and 15")
+                sys.exit(1)
+            else:
+                self.level = max(1, self.level)
+                self.level = min(15, self.level)
+                self.level -= 1
+        else:
+            self.level = 0
+            
         self.game = game
         self.width = width
         self.height = height
-        self.level = level - 1
         self.goal = 0
         self.score = 0
-        self.high_score = self.load_high_score()
+        try:
+            with open(self.FILE_PATH, "r") as f:
+               self.high_score = int(f.read())
+        except:
+            self.high_score = 0
         self.combo = -1
         self.time = time.time()
         self.lines_cleared = 0
@@ -433,13 +452,6 @@ class Stats(Window):
         self.strings = []
         Window.__init__(self, width, height, begin_x, begin_y)
         self.new_level()
-        
-    def load_high_score(self):
-        try:
-            with open(self.FILE_PATH, "r") as f:
-               return int(f.read())
-        except:
-            return 0
         
     def refresh(self):
         self.draw_border()
@@ -460,9 +472,8 @@ class Stats(Window):
         self.window.refresh()
         
     def clock(self):
-        self.clock_timer = self.game.scheduler.enter(1, 3, self.clock, tuple())
+        self.clock_timer = scheduler.enter(1, 3, self.clock, tuple())
         self.refresh()
-        
             
     def new_level(self):
         self.level += 1
@@ -509,8 +520,8 @@ class Stats(Window):
             self.refresh()
         
     def save(self):   
-        if not os.path.exists(DIR_PATH):
-            os.mkdir(DIR_PATH)
+        if not os.path.exists(self.DIR_PATH):
+            os.mkdir(self.DIR_PATH)
         try:
             with open(self.FILE_PATH, mode='w') as f:
                 f.write(str(self.high_score))
@@ -519,7 +530,7 @@ class Stats(Window):
             print(e)
         
         
-class Config(Window, configparser.SafeConfigParser):
+class Controls(Window, configparser.SafeConfigParser):
     TITLE = "CONTROLS"
     FILE_NAME = "config.cfg"
     if sys.platform == "win32":
@@ -578,16 +589,20 @@ class Config(Window, configparser.SafeConfigParser):
             key = key.replace("KEY_", "").upper()
             self.window.addstr(y, 2, "%s\t%s" % (key, action.upper()))
         self.window.refresh()
+        
+    def __getitem__(self, key):
+        return self.get("CONTROLS", key)
 
 class Game:
     WIDTH = 80
     HEIGHT = Matrix.HEIGHT
     AUTOREPEAT_DELAY = 0.02
     
-    def __init__(self, scr, level):
+    def __init__(self, scr):
         self.scr = scr
         
         if curses.has_colors():
+            curses.use_default_colors()
             curses.start_color()
             if curses.COLORS >= 16:
                 if curses.can_change_color():
@@ -618,9 +633,6 @@ class Game:
         self.scr.timeout(0)
         self.scr.getch()
         
-        self.scheduler = sched.scheduler(time.time, lambda delay: curses.napms(int(delay*1000)))
-        self.random_bag = []
-        
         left_x = (curses.COLS-self.WIDTH) // 2
         top_y = (curses.LINES-self.HEIGHT) // 2
         side_width = (self.WIDTH - Matrix.WIDTH) // 2
@@ -631,35 +643,35 @@ class Game:
         self.matrix = Matrix(self, left_x, top_y)
         self.hold = Hold(side_width, left_x, top_y)
         self.next = Next(side_width, right_x, top_y)
-        self.next.piece = self.random_piece()(self.matrix, Next.PIECE_POSITION)
-        self.stats = Stats(self, side_width, side_height, left_x, bottom_y, level)
-        self.config = Config(side_width, side_height, right_x, bottom_y)
+        self.stats = Stats(self, side_width, side_height, left_x, bottom_y)
+        self.controls = Controls(side_width, side_height, right_x, bottom_y)
         
         self.actions = {
-            self.config.get("CONTROLS", "QUIT"): self.quit,
-            self.config.get("CONTROLS", "PAUSE"): self.pause,
-            self.config.get("CONTROLS", "HOLD"): self.swap,
-            self.config.get("CONTROLS", "MOVE LEFT"): lambda: self.matrix.piece.move(Movement.LEFT),
-            self.config.get("CONTROLS", "MOVE RIGHT"): lambda: self.matrix.piece.move(Movement.RIGHT),
-            self.config.get("CONTROLS", "SOFT DROP"): lambda: self.matrix.piece.soft_drop(),
-            self.config.get("CONTROLS", "ROTATE COUNTER"): lambda: self.matrix.piece.rotate(Rotation.COUNTERCLOCKWISE),
-            self.config.get("CONTROLS", "ROTATE CLOCKWISE"): lambda: self.matrix.piece.rotate(Rotation.CLOCKWISE),
-            self.config.get("CONTROLS", "HARD DROP"): lambda: self.matrix.piece.hard_drop()
+            self.controls["QUIT"]: self.quit,
+            self.controls["PAUSE"]: self.pause,
+            self.controls["HOLD"]: self.swap,
+            self.controls["MOVE LEFT"]: lambda: self.matrix.piece.move(Movement.LEFT),
+            self.controls["MOVE RIGHT"]: lambda: self.matrix.piece.move(Movement.RIGHT),
+            self.controls["SOFT DROP"]: lambda: self.matrix.piece.soft_drop(),
+            self.controls["ROTATE COUNTER"]: lambda: self.matrix.piece.rotate(Rotation.COUNTERCLOCKWISE),
+            self.controls["ROTATE CLOCKWISE"]: lambda: self.matrix.piece.rotate(Rotation.CLOCKWISE),
+            self.controls["HARD DROP"]: lambda: self.matrix.piece.hard_drop()
         }
         
         self.playing = True
         self.paused = False
         self.stats.time = time.time()
-        self.stats.clock_timer = self.scheduler.enter(1, 3, self.stats.clock, tuple())
+        self.stats.clock_timer = scheduler.enter(1, 3, self.stats.clock, tuple())
+        self.random_bag = []
+        self.next.piece = self.random_piece()(self.matrix, Next.PIECE_POSITION)
         self.new_piece()
-        self.input_timer = self.scheduler.enter(self.AUTOREPEAT_DELAY, 2, self.process_input, tuple())
+        self.input_timer = scheduler.enter(self.AUTOREPEAT_DELAY, 2, self.process_input, tuple())
         
         try:
-            self.scheduler.run()
+            scheduler.run()
         except KeyboardInterrupt:
             self.quit()
-
-        
+    
     def random_piece(self):
         if not self.random_bag:
             self.random_bag = [O, I, T, L, J, S, Z]
@@ -673,12 +685,12 @@ class Game:
             self.next.refresh()
         self.matrix.piece.position = Matrix.PIECE_POSITION
         if self.matrix.piece.move(Movement.STILL, lock=False):
-            self.matrix.piece.fall_timer = self.scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
+            self.matrix.piece.fall_timer = scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
         else:
             self.over()
                 
     def process_input(self):
-        self.input_timer = self.scheduler.enter(self.AUTOREPEAT_DELAY, 2, self.process_input, tuple())
+        self.input_timer = scheduler.enter(self.AUTOREPEAT_DELAY, 2, self.process_input, tuple())
         try:
             action = self.actions[self.scr.getkey()]
         except (curses.error, KeyError):
@@ -695,10 +707,10 @@ class Game:
         self.scr.timeout(-1)
         while True:
             key = self.scr.getkey()
-            if key == self.config.get("CONTROLS", "QUIT"):
+            if key == self.controls["QUIT"]:
                 self.quit()
                 break
-            elif key == self.config.get("CONTROLS", "PAUSE"):
+            elif key == self.controls["PAUSE"]:
                 self.scr.timeout(0)
                 self.hold.refresh()
                 self.matrix.refresh()
@@ -709,10 +721,10 @@ class Game:
     def swap(self):
         if self.matrix.piece.hold_enabled:
             if self.matrix.piece.fall_timer:
-                self.scheduler.cancel(self.matrix.piece.fall_timer)
+                scheduler.cancel(self.matrix.piece.fall_timer)
                 self.matrix.piece.fall_timer = None
             if self.matrix.piece.lock_timer:
-                self.scheduler.cancel(self.matrix.piece.lock_timer)
+                scheduler.cancel(self.matrix.piece.lock_timer)
                 self.matrix.piece.lock_timer = None
             self.matrix.piece, self.hold.piece = self.hold.piece, self.matrix.piece
             self.hold.piece.position = self.hold.PIECE_POSITION
@@ -728,42 +740,29 @@ class Game:
         self.matrix.window.addstr(11, 9, "OVER", curses.A_BOLD)
         self.matrix.window.refresh()
         self.scr.timeout(-1)
-        while self.scr.getkey() != self.config.get("CONTROLS", "QUIT"):
+        while self.scr.getkey() != self.controls["QUIT"]:
             pass
         self.quit()
         
     def quit(self):
         self.playing = False
         if self.matrix.piece.fall_timer:
-            self.scheduler.cancel(self.matrix.piece.fall_timer)
+            scheduler.cancel(self.matrix.piece.fall_timer)
             self.matrix.piece.fall_timer = None
         if self.matrix.piece.lock_timer:
-            self.scheduler.cancel(self.matrix.piece.lock_timer)
+            scheduler.cancel(self.matrix.piece.lock_timer)
             self.matrix.piece.lock_timer = None
         if self.stats.clock_timer:
-            self.scheduler.cancel(self.stats.clock_timer)
+            scheduler.cancel(self.stats.clock_timer)
             self.stats.clock_timer = None
         if self.input_timer:
-            self.scheduler.cancel(self.input_timer)
+            scheduler.cancel(self.input_timer)
+            self.input_timer = None
         self.stats.save()
         
 
 def main():
-    if len(sys.argv) >= 2:
-        try:
-            level = int(sys.argv[1])
-        except ValueError:
-            print("Usage:")
-            print("python terminis.py [level]")
-            print("  level: integer between 1 and 15")
-            sys.exit(1)
-        else:
-            level = max(0, level)
-            level = min(15, level)
-    else:
-        level = 1
-    
-    curses.wrapper(Game, level)
+    curses.wrapper(Game)
         
         
 if __name__ == "__main__":
