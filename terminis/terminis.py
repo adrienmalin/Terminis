@@ -719,10 +719,10 @@ class Game:
 
 
 def main():
-    if "edit" in sys.argv[1:]:
+    if "--edit" in sys.argv[1:]:
         edit()
-    elif "help" in sys.argv[1:]:
-        usage()
+    elif "--help" in sys.argv[1:] or "/?" in sys.argv[1:]:
+        print_help()
     else:
         curses.wrapper(Game)
         
@@ -735,11 +735,11 @@ def edit():
     else:
         subprocess.call(["${EDITOR:-vi}", Controls.FILE_PATH])
     
-def usage():
+def print_help():
     print("Usage:")
-    print("python terminis.py [edit|help|n]")
-    print("  edit: edit controls in text editor")
-    print("  help: show command usage (this message)")
+    print("python terminis.py [--edit|--help|n]")
+    print("  --edit: edit controls in text editor")
+    print("  --help: show command usage (this message)")
     print("  n (integer between 1 and 15): start at level n")
 
 
