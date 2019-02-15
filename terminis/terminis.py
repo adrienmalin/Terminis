@@ -737,7 +737,7 @@ def edit():
     
 def print_help():
     print("Usage:")
-    print("python terminis.py [--edit|--help|n]")
+    print("terminis [--edit|--help|n]")
     print("  --edit: edit controls in text editor")
     print("  --help: show command usage (this message)")
     print("  n (integer between 1 and 15): start at level n")
