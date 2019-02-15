@@ -188,10 +188,7 @@ class Tetromino:
             if self.fall_timer:
                 scheduler.cancel(self.fall_timer)
                 self.fall_timer = None
-            if all(self.position.y + mino.position.y <= 0 for mino in self.minoes):
-                self.matrix.game.over()
-            else:
-                self.matrix.lock(self.t_spin())
+            self.matrix.lock(self.t_spin())
 
     def t_spin(self):
         return ""
@@ -330,8 +327,11 @@ class Matrix(Window):
     def lock(self, t_spin):
         for mino in self.piece.minoes:
             position = mino.position + self.piece.position
-            if position.y >= 0:
+            if position.y > 0:
                 self.cells[position.y][position.x] = mino.color
+            else:
+                self.game.over()
+                
         nb_lines_cleared = 0
         for y, line in enumerate(self.cells):
             if all(mino for mino in line):
