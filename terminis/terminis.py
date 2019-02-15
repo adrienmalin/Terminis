@@ -377,10 +377,7 @@ class Stats(Window):
             try:
                 self.level = int(sys.argv[1])
             except ValueError:
-                print("Usage:")
-                print("python terminis.py [edit|n]")
-                print("  edit: edit controls in text editor")
-                print("  n (integer between 1 and 15): start at level n")
+                usage()
                 sys.exit(1)
             else:
                 self.level = max(1, self.level)
@@ -722,12 +719,24 @@ class Game:
 
 def main():
     if "edit" in sys.argv[1:]:
-        if sys.platform == "win32":
-            os.system("notepad "+Controls.FILE_PATH)
-        else:
-            os.system("${EDITOR:-vi} "+Controls.FILE_PATH)
+        edit()
+    elif "help" in sys.argv[1:]:
+        usage()
     else:
         curses.wrapper(Game)
+        
+def edit():
+    if sys.platform == "win32":
+        os.system("notepad "+Controls.FILE_PATH)
+    else:
+        os.system("${EDITOR:-vi} "+Controls.FILE_PATH)
+    
+def usage():
+    print("Usage:")
+    print("python terminis.py [edit|help|n]")
+    print("  edit: edit controls in text editor")
+    print("  help: show command usage (this message)")
+    print("  n (integer between 1 and 15): start at level n")
 
 
 if __name__ == "__main__":
