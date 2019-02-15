@@ -1,7 +1,7 @@
 # Terminis
 Tetris clone for terminal. Ideal for servers without GUI!
 
-## Installation
+## Install
 
 ```bash
 pip install --user terminis
@@ -10,8 +10,9 @@ pip install --user terminis
 ## Usage
 
 ```bash
-terminis [--edit|--help|n]
+terminis [OPTIONS]
 ```
+* --help: show command usage (this message)
 * --edit: edit controls in text editor
-* --help: show command usage
-* n (integer between 1 and 15): start at level n
+* --reset: reset to default controls settings
+* --level=n: start at level n (integer between 1 and 15)

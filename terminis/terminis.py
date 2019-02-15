@@ -22,13 +22,14 @@ except ImportError:
 
 
 DIR_NAME = "Terminis"
-HELP_MSG = """terminis [--edit|--help|n]
+HELP_MSG = """terminis [OPTIONS]
 
 Tetris clone for terminal
 
-  --edit: edit controls in text editor
   --help: show command usage (this message)
-  n (integer between 1 and 15): start at level n"""
+  --edit: edit controls in text editor
+  --reset: reset to default controls settings
+  --level=n: start at level n (integer between 1 and 15)"""
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -382,15 +383,17 @@ class Stats(Window):
     FILE_PATH = os.path.join(DIR_PATH, FILE_NAME)
 
     def __init__(self, game, width, height, begin_x, begin_y):
-        if len(sys.argv) >= 2:
-            try:
-                self.level = int(sys.argv[1])
-            except ValueError:
-                sys.exit(HELP_MSG)
-            else:
-                self.level = max(1, self.level)
-                self.level = min(15, self.level)
-                self.level -= 1
+        for arg in sys.argv[1:]:
+            if arg.startswith("--level="):
+                try:
+                    self.level = int(arg[8:])
+                except ValueError:
+                    sys.exit(HELP_MSG)
+                else:
+                    self.level = max(1, self.level)
+                    self.level = min(15, self.level)
+                    self.level -= 1
+                    break
         else:
             self.level = 0
 
@@ -489,8 +492,7 @@ class Stats(Window):
             print(e)
 
 
-class Controls(Window, configparser.SafeConfigParser):
-    TITLE = "CONTROLS"
+class ControlsParser(configparser.SafeConfigParser):
     FILE_NAME = "config.cfg"
     if sys.platform == "win32":
         DIR_PATH = os.environ.get("appdata", os.path.expanduser("~\Appdata\Roaming"))
@@ -500,7 +502,7 @@ class Controls(Window, configparser.SafeConfigParser):
     FILE_PATH = os.path.join(DIR_PATH, FILE_NAME)
     SECTION = "CONTROLS"
 
-    def __init__(self, width, height, begin_x, begin_y):
+    def __init__(self):
         configparser.SafeConfigParser.__init__(self)
         self.optionxform = str
         self.add_section(self.SECTION)
@@ -513,27 +515,52 @@ class Controls(Window, configparser.SafeConfigParser):
         self["HOLD"] = "h"
         self["PAUSE"] = "p"
         self["QUIT"] = "q"
-        if os.path.exists(self.FILE_PATH):
-            self.read(self.FILE_PATH)
-        else:
-            if not os.path.exists(self.DIR_PATH):
-                os.mkdir(self.DIR_PATH)
-            try:
-                with open(self.FILE_PATH, 'w') as f:
-                    f.write(
+        
+        if not os.path.exists(self.FILE_PATH):
+            self.reset()
+
+    def __getitem__(self, key):
+        return self.get(self.SECTION, key)
+    
+    def __setitem__(self, key, value):
+        self.set(self.SECTION, key, value)
+        
+    def reset(self):
+        if not os.path.exists(self.DIR_PATH):
+            os.mkdir(self.DIR_PATH)
+        try:
+            with open(self.FILE_PATH, 'w') as f:
+                f.write(
 """# You can change key below.
 # Acceptable values are:
-# * `SPACE`, `TAB`, `ENTER`
-# * printable characters (`q`, `*`...)
-# * curses's constants name starting with `KEY_`
-#   See https://docs.python.org/3/library/curses.html?highlight=curses#constants
+# `SPACE`, `TAB`, `ENTER`
+# printable characters (`q`, `*`...)
+# curses's constants name starting with `KEY_`
+# See https://docs.python.org/3/library/curses.html?highlight=curses#constants
 
 """
-                    )
-                    self.write(f)
-            except Exception as e:
-                print("Configuration could not be saved:")
-                print(e)
+                )
+                self.write(f)
+        except Exception as e:
+            print("Configuration could not be saved:")
+            print(e)
+
+    def edit(self):
+        if sys.platform == "win32":
+            try:
+                subprocess.call(["edit.com", self.FILE_PATH])
+            except FileNotFoundError:
+                subprocess.call(["notepad.exe", self.FILE_PATH])
+        else:
+            subprocess.call(["${EDITOR:-vi}", self.FILE_PATH])
+
+
+class ControlsWindow(Window, ControlsParser):
+    TITLE = "CONTROLS"
+            
+    def __init__(self, width, height, begin_x, begin_y):
+        ControlsParser.__init__(self)
+        self.read(self.FILE_PATH)
         Window.__init__(self, width, height, begin_x, begin_y)
         for action, key in self.items(self.SECTION):
             if key == "SPACE":
@@ -549,13 +576,7 @@ class Controls(Window, configparser.SafeConfigParser):
             key = key.replace("KEY_", "").upper()
             self.window.addstr(y, 2, "%s\t%s" % (key, action.upper()))
         self.window.refresh()
-
-    def __getitem__(self, key):
-        return self.get(self.SECTION, key)
     
-    def __setitem__(self, key, value):
-        self.set(self.SECTION, key, value)
-
 
 class Game:
     WIDTH = 80
@@ -608,7 +629,7 @@ class Game:
         self.hold = Hold(side_width, left_x, top_y)
         self.next = Next(side_width, right_x, top_y)
         self.stats = Stats(self, side_width, side_height, left_x, bottom_y)
-        self.controls = Controls(side_width, side_height, right_x, bottom_y)
+        self.controls = ControlsWindow(side_width, side_height, right_x, bottom_y)
 
         self.actions = {
             self.controls["QUIT"]: self.quit,
@@ -726,23 +747,17 @@ class Game:
 
 
 def main():
-    if "--edit" in sys.argv[1:]:
-        edit()
-    elif "--help" in sys.argv[1:] or "/?" in sys.argv[1:]:
+    if "--help" in sys.argv[1:] or "/?" in sys.argv[1:]:
         print(HELP_MSG)
     else:
+        if "--reset" in sys.argv[1:]:
+            controls = ControlsParser()
+            controls.reset()
+            controls.edit()
+        elif "--edit" in sys.argv[1:]:
+            ControlsParser().edit()
         curses.wrapper(Game)
         
-def edit():
-    if sys.platform == "win32":
-        try:
-            subprocess.call(["edit.com", Controls.FILE_PATH])
-        except FileNotFoundError:
-            subprocess.call(["notepad.exe", Controls.FILE_PATH])
-    else:
-        subprocess.call(["${EDITOR:-vi}", Controls.FILE_PATH])
-    
-
 
 if __name__ == "__main__":
     main()
