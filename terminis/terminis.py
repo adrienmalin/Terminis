@@ -727,9 +727,13 @@ def main():
         
 def edit():
     if sys.platform == "win32":
-        os.system("notepad "+Controls.FILE_PATH)
+        if "PROGRAMFILES(X86)" in os.environ:
+            command = "notepad"
+        else:
+            command = "edit"
     else:
-        os.system("${EDITOR:-vi} "+Controls.FILE_PATH)
+        command = "${EDITOR:-vi}"
+    os.system(command+" "+Controls.FILE_PATH)
     
 def usage():
     print("Usage:")
