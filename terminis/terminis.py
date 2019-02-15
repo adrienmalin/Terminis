@@ -7,8 +7,7 @@ except ImportError:
     sys.exit(
 """This program requires curses.
 You can install it on Windows with:
-pip install --user windows-curses
-"""
+pip install --user windows-curses"""
     )
 import random
 import sched
@@ -23,15 +22,13 @@ except ImportError:
 
 
 DIR_NAME = "Terminis"
-
 HELP_MSG = """terminis [--edit|--help|n]
 
 Tetris clone for terminal
 
   --edit: edit controls in text editor
   --help: show command usage (this message)
-  n (integer between 1 and 15): start at level n
-"""
+  n (integer between 1 and 15): start at level n"""
 
 
 locale.setlocale(locale.LC_ALL, '')
