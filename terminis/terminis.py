@@ -327,10 +327,11 @@ class Matrix(Window):
     def lock(self, t_spin):
         for mino in self.piece.minoes:
             position = mino.position + self.piece.position
-            if position.y > 0:
+            if position.y >= 0:
                 self.cells[position.y][position.x] = mino.color
             else:
                 self.game.over()
+                return
                 
         nb_lines_cleared = 0
         for y, line in enumerate(self.cells):
