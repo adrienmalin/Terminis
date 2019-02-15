@@ -13,7 +13,7 @@ import sched
 import time
 import os
 import locale
-import distutils.spawn
+import subprocess
 try:
     import configparser
 except ImportError:
@@ -728,13 +728,12 @@ def main():
         
 def edit():
     if sys.platform == "win32":
-        if distutils.spawn.find_executable("edit"):
-            command = "edit"
-        else:
-            command = "notepad"
+        try:
+            subprocess.call(["edit.com", Controls.FILE_PATH])
+        except FileNotFoundError:
+            subprocess.call(["notepad.exe", Controls.FILE_PATH])
     else:
-        command = "${EDITOR:-vi}"
-    os.system(command+" "+Controls.FILE_PATH)
+        subprocess.call(["${EDITOR:-vi}", Controls.FILE_PATH])
     
 def usage():
     print("Usage:")
