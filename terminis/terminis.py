@@ -26,10 +26,10 @@ HELP_MSG = """terminis [options]
 
 Tetris clone for terminal
 
-  --help: show command usage (this message)
-  --edit: edit controls in text editor
-  --reset: reset to default controls settings
-  --level=n: start at level n (integer between 1 and 15)"""
+  --help\tshow command usage (this message)
+  --edit\tedit controls in text editor
+  --reset\treset to default controls settings
+  --level=n\tstart at level n (integer between 1 and 15)"""
 
 
 locale.setlocale(locale.LC_ALL, '')
