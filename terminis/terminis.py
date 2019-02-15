@@ -22,7 +22,7 @@ except ImportError:
 
 
 DIR_NAME = "Terminis"
-HELP_MSG = """terminis [OPTIONS]
+HELP_MSG = """terminis [options]
 
 Tetris clone for terminal
 
@@ -501,6 +501,14 @@ class ControlsParser(configparser.SafeConfigParser):
     DIR_PATH = os.path.join(DIR_PATH, DIR_NAME)
     FILE_PATH = os.path.join(DIR_PATH, FILE_NAME)
     SECTION = "CONTROLS"
+    COMMENT = """# You can change key below.
+# Acceptable values are:
+# `SPACE`, `TAB`, `ENTER`,
+# printable characters (`q`, `*`...),
+# curses's constants name starting with `KEY_`
+# See https://docs.python.org/3/library/curses.html?highlight=curses#constants
+
+"""
 
     def __init__(self):
         configparser.SafeConfigParser.__init__(self)
@@ -530,16 +538,7 @@ class ControlsParser(configparser.SafeConfigParser):
             os.mkdir(self.DIR_PATH)
         try:
             with open(self.FILE_PATH, 'w') as f:
-                f.write(
-"""# You can change key below.
-# Acceptable values are:
-# `SPACE`, `TAB`, `ENTER`
-# printable characters (`q`, `*`...)
-# curses's constants name starting with `KEY_`
-# See https://docs.python.org/3/library/curses.html?highlight=curses#constants
-
-"""
-                )
+                f.write(self.COMMENT)
                 self.write(f)
         except Exception as e:
             print("Configuration could not be saved:")

@@ -10,7 +10,7 @@ pip install --user terminis
 ## Usage
 
 ```bash
-terminis [OPTIONS]
+terminis [options]
 ```
 * --help: show command usage (this message)
 * --edit: edit controls in text editor
