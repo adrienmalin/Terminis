@@ -378,7 +378,7 @@ class Stats(Window):
             try:
                 self.level = int(sys.argv[1])
             except ValueError:
-                usage()
+                print_help()
                 sys.exit(1)
             else:
                 self.level = max(1, self.level)
@@ -522,7 +522,7 @@ class Controls(Window, configparser.SafeConfigParser):
 #   See https://docs.python.org/3/library/curses.html?highlight=curses#constants
 
 """
-)
+                    )
                     self.write(f)
             except Exception as e:
                 print("Configuration could not be saved:")
@@ -736,11 +736,16 @@ def edit():
         subprocess.call(["${EDITOR:-vi}", Controls.FILE_PATH])
     
 def print_help():
-    print("Usage:")
-    print("terminis [--edit|--help|n]")
-    print("  --edit: edit controls in text editor")
-    print("  --help: show command usage (this message)")
-    print("  n (integer between 1 and 15): start at level n")
+    print(
+"""terminis [--edit|--help|n]
+
+Tetris clone for terminal
+
+  --edit: edit controls in text editor
+  --help: show command usage (this message)
+  n (integer between 1 and 15): start at level n
+"""
+    )
 
 
 if __name__ == "__main__":
