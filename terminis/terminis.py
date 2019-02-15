@@ -504,7 +504,7 @@ class ControlsParser(configparser.SafeConfigParser):
     COMMENT = """# You can change key below.
 # Acceptable values are:
 # `SPACE`, `TAB`, `ENTER`,
-# printable characters (`q`, `*`...),
+# printable characters (`q`, `*`...) (case sensitive),
 # curses's constants name starting with `KEY_`
 # See https://docs.python.org/3/library/curses.html?highlight=curses#constants
 
