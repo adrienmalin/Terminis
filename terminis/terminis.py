@@ -303,7 +303,7 @@ class Matrix(Window):
         begin_y += (game.HEIGHT - self.HEIGHT) // 2
         self.game = game
         self.cells = [
-            [None for x in range(self.NB_COLS)]
+            [Color.BLACK for x in range(self.NB_COLS)]
             for y in range(self.NB_LINES)
         ]
         Window.__init__(self, self.WIDTH, self.HEIGHT, begin_x, begin_y)
@@ -336,7 +336,7 @@ class Matrix(Window):
         for y, line in enumerate(self.cells):
             if all(mino for mino in line):
                 self.cells.pop(y)
-                self.cells.insert(0, [None for x in range(self.NB_COLS)])
+                self.cells.insert(0, [Color.BLACK for x in range(self.NB_COLS)])
                 nb_lines_cleared += 1
         self.game.stats.piece_locked(nb_lines_cleared, t_spin)
         self.game.new_piece()
@@ -551,7 +551,7 @@ class ControlsParser(configparser.SafeConfigParser):
             except FileNotFoundError:
                 subprocess.call(["notepad.exe", self.FILE_PATH])
         else:
-            subprocess.call(["${EDITOR:-vi}", self.FILE_PATH])
+            os.system("${EDITOR:-vi}"+" "+self.FILE_PATH)
 
 
 class ControlsWindow(Window, ControlsParser):
@@ -591,23 +591,23 @@ class Game:
             if curses.COLORS >= 16:
                 if curses.can_change_color():
                     curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
-                curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
-                curses.init_pair(Color.RED, curses.COLOR_RED+8, curses.COLOR_RED+8)
-                curses.init_pair(Color.GREEN, curses.COLOR_GREEN+8, curses.COLOR_GREEN+8)
-                curses.init_pair(Color.YELLOW, curses.COLOR_YELLOW+8, curses.COLOR_YELLOW+8)
-                curses.init_pair(Color.BLUE, curses.COLOR_BLUE+8, curses.COLOR_BLUE+8)
-                curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA+8, curses.COLOR_MAGENTA+8)
-                curses.init_pair(Color.CYAN, curses.COLOR_CYAN+8, curses.COLOR_CYAN+8)
-                curses.init_pair(Color.WHITE, curses.COLOR_WHITE+8, curses.COLOR_WHITE+8)
+                curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+                curses.init_pair(Color.RED, curses.COLOR_RED+8, curses.COLOR_BLACK)
+                curses.init_pair(Color.GREEN, curses.COLOR_GREEN+8, curses.COLOR_BLACK)
+                curses.init_pair(Color.YELLOW, curses.COLOR_YELLOW+8, curses.COLOR_BLACK)
+                curses.init_pair(Color.BLUE, curses.COLOR_BLUE+8, curses.COLOR_BLACK)
+                curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA+8, curses.COLOR_BLACK)
+                curses.init_pair(Color.CYAN, curses.COLOR_CYAN+8, curses.COLOR_BLACK)
+                curses.init_pair(Color.WHITE, curses.COLOR_WHITE+8, curses.COLOR_BLACK)
             else:
-                curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_YELLOW)
-                curses.init_pair(Color.RED, curses.COLOR_RED, curses.COLOR_RED)
-                curses.init_pair(Color.GREEN, curses.COLOR_GREEN, curses.COLOR_GREEN)
-                curses.init_pair(Color.YELLOW, curses.COLOR_WHITE, curses.COLOR_WHITE)
-                curses.init_pair(Color.BLUE, curses.COLOR_BLUE, curses.COLOR_BLUE)
-                curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA, curses.COLOR_MAGENTA)
-                curses.init_pair(Color.CYAN, curses.COLOR_CYAN, curses.COLOR_CYAN)
-                curses.init_pair(Color.WHITE, curses.COLOR_WHITE, curses.COLOR_WHITE)
+                curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+                curses.init_pair(Color.RED, curses.COLOR_RED, curses.COLOR_BLACK)
+                curses.init_pair(Color.GREEN, curses.COLOR_GREEN, curses.COLOR_BLACK)
+                curses.init_pair(Color.YELLOW, curses.COLOR_WHITE, curses.COLOR_BLACK)
+                curses.init_pair(Color.BLUE, curses.COLOR_BLUE, curses.COLOR_BLACK)
+                curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+                curses.init_pair(Color.CYAN, curses.COLOR_CYAN, curses.COLOR_BLACK)
+                curses.init_pair(Color.WHITE, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
         try:
             curses.curs_set(0)
@@ -619,9 +619,9 @@ class Game:
 
         left_x = (curses.COLS-self.WIDTH) // 2
         top_y = (curses.LINES-self.HEIGHT) // 2
-        side_width = (self.WIDTH - Matrix.WIDTH) // 2
+        side_width = (self.WIDTH - Matrix.WIDTH) // 2 - 1
         side_height = self.HEIGHT - Hold.HEIGHT
-        right_x = left_x + Matrix.WIDTH + side_width
+        right_x = left_x + Matrix.WIDTH + side_width + 2
         bottom_y = top_y + Hold.HEIGHT
 
         self.matrix = Matrix(self, left_x, top_y)
@@ -720,8 +720,11 @@ class Game:
 
     def over(self):
         self.matrix.refresh()
-        self.matrix.window.addstr(10, 9, "GAME", curses.A_BOLD)
-        self.matrix.window.addstr(11, 9, "OVER", curses.A_BOLD)
+        for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
+            for x, char in enumerate(word, start=Matrix.NB_COLS//2-1):
+                color = self.matrix.cells[y][x]
+                color = curses.color_pair(color)|curses.A_REVERSE if color else curses.color_pair(Color.BLACK)
+                self.matrix.window.addstr(y, x*2+1, char, color)
         self.matrix.window.refresh()
         self.scr.timeout(-1)
         while self.scr.getkey() != self.controls["QUIT"]:
