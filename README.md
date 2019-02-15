@@ -10,9 +10,10 @@ pip install --user terminis
 ## Usage
 
 ```bash
-terminis [level]
+terminis [edit|n]
 ```
-  level: integer between 1 and 15
+* edit: edit controls in text editor
+* n (integer between 1 and 15): start at level n
 
 ## Controls edit
 
