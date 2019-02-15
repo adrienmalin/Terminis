@@ -13,6 +13,7 @@ import sched
 import time
 import os
 import locale
+import distutils.spawn
 try:
     import configparser
 except ImportError:
@@ -727,10 +728,10 @@ def main():
         
 def edit():
     if sys.platform == "win32":
-        if "PROGRAMFILES(X86)" in os.environ:
-            command = "notepad"
-        else:
+        if distutils.spawn.find_executable("edit"):
             command = "edit"
+        else:
+            command = "notepad"
     else:
         command = "${EDITOR:-vi}"
     os.system(command+" "+Controls.FILE_PATH)
