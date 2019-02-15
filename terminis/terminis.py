@@ -4,10 +4,12 @@ import sys
 try:
     import curses
 except ImportError:
-    print("This program requires curses.")
-    print("You can install it on Windows with:")
-    print("pip install --user windows-curses")
-    sys.exit(1)
+    sys.exit(
+"""This program requires curses.
+You can install it on Windows with:
+pip install --user windows-curses
+"""
+    )
 import random
 import sched
 import time
@@ -21,6 +23,15 @@ except ImportError:
 
 
 DIR_NAME = "Terminis"
+
+HELP_MSG = """terminis [--edit|--help|n]
+
+Tetris clone for terminal
+
+  --edit: edit controls in text editor
+  --help: show command usage (this message)
+  n (integer between 1 and 15): start at level n
+"""
 
 
 locale.setlocale(locale.LC_ALL, '')
@@ -378,8 +389,7 @@ class Stats(Window):
             try:
                 self.level = int(sys.argv[1])
             except ValueError:
-                print_help()
-                sys.exit(1)
+                sys.exit(HELP_MSG)
             else:
                 self.level = max(1, self.level)
                 self.level = min(15, self.level)
@@ -722,7 +732,7 @@ def main():
     if "--edit" in sys.argv[1:]:
         edit()
     elif "--help" in sys.argv[1:] or "/?" in sys.argv[1:]:
-        print_help()
+        print(HELP_MSG)
     else:
         curses.wrapper(Game)
         
@@ -735,17 +745,6 @@ def edit():
     else:
         subprocess.call(["${EDITOR:-vi}", Controls.FILE_PATH])
     
-def print_help():
-    print(
-"""terminis [--edit|--help|n]
-
-Tetris clone for terminal
-
-  --edit: edit controls in text editor
-  --help: show command usage (this message)
-  n (integer between 1 and 15): start at level n
-"""
-    )
 
 
 if __name__ == "__main__":
