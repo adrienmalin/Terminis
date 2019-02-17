@@ -440,7 +440,8 @@ class Stats(Window):
 
     def new_level(self):
         self.level += 1
-        Tetromino.fall_delay = pow(0.8 - ((self.level-1)*0.007), self.level-1)
+        if self.level <= 20:
+            Tetromino.fall_delay = pow(0.8 - ((self.level-1)*0.007), self.level-1)
         if self.level > 15:
             Tetromino.lock_delay = 0.5 * pow(0.9, self.level-15)
         self.goal += 5 * self.level
