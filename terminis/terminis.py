@@ -275,16 +275,14 @@ class Window:
     def draw_piece(self):
         if self.piece:
             if self.piece.lock_timer:
-                color = Color.WHITE
-                attr = curses.A_BLINK
+                attr = curses.A_BLINK | curses.A_REVERSE | curses.A_BOLD
             else:
-                color = self.piece.COLOR
-                attr = 0
+                attr = curses.A_BOLD
             for mino in self.piece.minoes:
                 position = mino.position + self.piece.position
-                self.draw_mino(position.x, position.y, color, attr)
+                self.draw_mino(position.x, position.y, self.piece.COLOR, attr)
 
-    def draw_mino(self, x, y, color=Color.WHITE, attr=0):
+    def draw_mino(self, x, y, color=Color.WHITE, attr=curses.A_BOLD):
         if y >= 0:
             if self.has_colors:
                 self.window.addstr(y, x*2+1, "██", curses.color_pair(color)|attr)
@@ -593,25 +591,25 @@ class Game:
     HEIGHT = Matrix.HEIGHT
     AUTOREPEAT_DELAY = 0.02
     COLOR_PAIRS = {
-        8: {
-            Color.ORANGE: (curses.COLOR_YELLOW, curses.COLOR_BLACK),
-            Color.RED: (curses.COLOR_RED+8, curses.COLOR_BLACK),
-            Color.GREEN: (curses.COLOR_GREEN+8, curses.COLOR_BLACK),
-            Color.YELLOW: (curses.COLOR_YELLOW+8, curses.COLOR_BLACK),
-            Color.BLUE: (curses.COLOR_BLUE+8, curses.COLOR_BLACK),
-            Color.MAGENTA: (curses.COLOR_MAGENTA+8, curses.COLOR_BLACK),
-            Color.CYAN: (curses.COLOR_CYAN+8, curses.COLOR_BLACK),
-            Color.WHITE: (curses.COLOR_WHITE+8, curses.COLOR_BLACK)
-       },
         16: {
-            Color.ORANGE: (curses.COLOR_YELLOW, curses.COLOR_BLACK),
-            Color.RED: (curses.COLOR_RED, curses.COLOR_BLACK),
-            Color.GREEN: (curses.COLOR_GREEN, curses.COLOR_BLACK),
-            Color.YELLOW: (curses.COLOR_WHITE, curses.COLOR_BLACK),
-            Color.BLUE: (curses.COLOR_BLUE, curses.COLOR_BLACK),
-            Color.MAGENTA: (curses.COLOR_MAGENTA, curses.COLOR_BLACK),
-            Color.CYAN: (curses.COLOR_CYAN, curses.COLOR_BLACK),
-            Color.WHITE: (curses.COLOR_WHITE, curses.COLOR_BLACK)
+            Color.ORANGE: (curses.COLOR_YELLOW, curses.COLOR_WHITE),
+            Color.RED: (curses.COLOR_RED+8, curses.COLOR_WHITE),
+            Color.GREEN: (curses.COLOR_GREEN+8, curses.COLOR_WHITE),
+            Color.YELLOW: (curses.COLOR_YELLOW+8, curses.COLOR_WHITE),
+            Color.BLUE: (curses.COLOR_BLUE+8, curses.COLOR_WHITE),
+            Color.MAGENTA: (curses.COLOR_MAGENTA+8, curses.COLOR_WHITE),
+            Color.CYAN: (curses.COLOR_CYAN+8, curses.COLOR_WHITE),
+            Color.WHITE: (curses.COLOR_WHITE+8, curses.COLOR_WHITE)
+       },
+        8: {
+            Color.ORANGE: (curses.COLOR_YELLOW, curses.COLOR_WHITE),
+            Color.RED: (curses.COLOR_RED, curses.COLOR_WHITE),
+            Color.GREEN: (curses.COLOR_GREEN, curses.COLOR_WHITE),
+            Color.YELLOW: (curses.COLOR_WHITE, curses.COLOR_WHITE),
+            Color.BLUE: (curses.COLOR_BLUE, curses.COLOR_WHITE),
+            Color.MAGENTA: (curses.COLOR_MAGENTA, curses.COLOR_WHITE),
+            Color.CYAN: (curses.COLOR_CYAN, curses.COLOR_WHITE),
+            Color.WHITE: (curses.COLOR_WHITE, curses.COLOR_WHITE)
         }
     }
 
@@ -744,7 +742,10 @@ class Game:
         for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
             for x, char in enumerate(word, start=Matrix.NB_COLS//2-1):
                 color = self.matrix.cells[y][x]
-                color = curses.color_pair(color)|curses.A_REVERSE if color else curses.color_pair(Color.BLACK)
+                if color == Color.BLACK:
+                    color = curses.color_pair(Color.BLACK) | curses.A_BOLD
+                else:
+                    color = curses.color_pair(color) | curses.A_REVERSE | curses.A_BOLD
                 self.matrix.window.addstr(y, x*2+1, char, color)
         self.matrix.window.refresh()
         curses.beep()
