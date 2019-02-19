@@ -9,6 +9,8 @@ except ImportError:
 You can install it on Windows with:
 pip install --user windows-curses"""
     )
+else:
+    curses.COLOR_ORANGE = 8
 import random
 import sched
 import time
@@ -44,18 +46,6 @@ class Rotation:
     COUNTERCLOCKWISE = -1
 
 
-class Color:
-    BLACK = 0
-    WHITE = 1
-    YELLOW = 2
-    RED = 3
-    GREEN = 4
-    BLUE = 5
-    MAGENTA = 6
-    CYAN = 7
-    ORANGE = 8
-
-
 class Point:
     def __init__(self, x, y):
         self.x = x
@@ -73,9 +63,11 @@ class Movement:
 
 
 class Mino:
+    color_pairs = [None for _ in range(9)]
+    
     def __init__(self, position, color):
         self.position = position
-        self.color = color
+        self.color_pair = self.color_pairs[color]
 
 
 class Tetromino:
@@ -196,7 +188,7 @@ class Tetromino:
 
 class O(Tetromino):
     MINOES_POSITIONS = (Point(0, 0), Point(1, 0), Point(0, -1), Point(1, -1))
-    COLOR = Color.YELLOW
+    COLOR = curses.COLOR_YELLOW
 
     def rotate(self, direction):
         return False
@@ -221,11 +213,11 @@ class I(Tetromino):
         },
     )
     MINOES_POSITIONS = (Point(-1, 0), Point(0, 0), Point(1, 0), Point(2, 0))
-    COLOR = Color.CYAN
+    COLOR = curses.COLOR_CYAN
 
 class T(Tetromino):
     MINOES_POSITIONS = (Point(-1, 0), Point(0, 0), Point(0, -1), Point(1, 0))
-    COLOR = Color.MAGENTA
+    COLOR = curses.COLOR_MAGENTA
     T_SLOT = (Point(-1, -1), Point(1, -1), Point(1, 1), Point(-1, 1))
 
     def t_spin(self):
@@ -242,19 +234,19 @@ class T(Tetromino):
 
 class L(Tetromino):
     MINOES_POSITIONS = (Point(-1, 0), Point(0, 0), Point(1, 0), Point(1, -1))
-    COLOR = Color.ORANGE
+    COLOR = curses.COLOR_ORANGE
 
 class J(Tetromino):
     MINOES_POSITIONS = (Point(-1, -1), Point(-1, 0), Point(0, 0), Point(1, 0))
-    COLOR = Color.BLUE
+    COLOR = curses.COLOR_BLUE
 
 class S(Tetromino):
     MINOES_POSITIONS = (Point(-1, 0), Point(0, 0), Point(0, -1), Point(1, -1))
-    COLOR = Color.GREEN
+    COLOR = curses.COLOR_GREEN
 
 class Z(Tetromino):
     MINOES_POSITIONS = (Point(-1, -1), Point(0, -1), Point(0, 0), Point(1, 0))
-    COLOR = Color.RED
+    COLOR = curses.COLOR_RED
 
 
 class Window:
@@ -270,22 +262,22 @@ class Window:
         self.window.erase()
         self.window.border()
         if self.TITLE:
-            self.window.addstr(0, self.title_begin_x, self.TITLE, curses.A_BOLD)
+            self.window.addstr(0, self.title_begin_x, self.TITLE)
 
     def draw_piece(self):
         if self.piece:
             if self.piece.lock_timer:
-                attr = curses.A_BLINK | curses.A_REVERSE | curses.A_BOLD
+                attr = Mino.color_pairs[self.piece.COLOR] | curses.A_BLINK | curses.A_REVERSE
             else:
-                attr = curses.A_BOLD
+                attr = Mino.color_pairs[self.piece.COLOR]
             for mino in self.piece.minoes:
                 position = mino.position + self.piece.position
-                self.draw_mino(position.x, position.y, self.piece.COLOR, attr)
+                self.draw_mino(position.x, position.y, attr)
 
-    def draw_mino(self, x, y, color=Color.WHITE, attr=curses.A_BOLD):
+    def draw_mino(self, x, y, color):
         if y >= 0:
             if self.has_colors:
-                self.window.addstr(y, x*2+1, "██", curses.color_pair(color)|attr)
+                self.window.addstr(y, x*2+1, "██", color)
             else:
                 self.window.addstr(y, x*2+1, "██")
 
@@ -303,7 +295,7 @@ class Matrix(Window):
         begin_y += (game.HEIGHT - self.HEIGHT) // 2
         self.game = game
         self.cells = [
-            [Color.BLACK for x in range(self.NB_COLS)]
+            [curses.COLOR_BLACK for x in range(self.NB_COLS)]
             for y in range(self.NB_LINES)
         ]
         Window.__init__(self, self.WIDTH, self.HEIGHT, begin_x, begin_y)
@@ -331,7 +323,7 @@ class Matrix(Window):
         for mino in self.piece.minoes:
             position = mino.position + self.piece.position
             if position.y >= 0:
-                self.cells[position.y][position.x] = mino.color
+                self.cells[position.y][position.x] = mino.color_pair
             else:
                 self.game.over()
                 return
@@ -340,7 +332,7 @@ class Matrix(Window):
         for y, line in enumerate(self.cells):
             if all(mino for mino in line):
                 self.cells.pop(y)
-                self.cells.insert(0, [Color.BLACK for x in range(self.NB_COLS)])
+                self.cells.insert(0, [curses.COLOR_BLACK for x in range(self.NB_COLS)])
                 nb_lines_cleared += 1
         self.game.stats.piece_locked(nb_lines_cleared, t_spin)
         self.game.new_piece()
@@ -560,7 +552,7 @@ class ControlsParser(configparser.SafeConfigParser):
             except FileNotFoundError:
                 subprocess.call(["notepad.exe", self.FILE_PATH])
         else:
-            os.system("${EDITOR:-vi}"+" "+self.FILE_PATH)
+            os.system("${EDITOR:-nano}"+" "+self.FILE_PATH)
 
 
 class ControlsWindow(Window, ControlsParser):
@@ -590,51 +582,25 @@ class Game:
     WIDTH = 80
     HEIGHT = Matrix.HEIGHT
     AUTOREPEAT_DELAY = 0.02
-    COLOR_PAIRS = {
-        16: {
-            Color.ORANGE: (curses.COLOR_YELLOW, curses.COLOR_WHITE),
-            Color.RED: (curses.COLOR_RED+8, curses.COLOR_WHITE),
-            Color.GREEN: (curses.COLOR_GREEN+8, curses.COLOR_WHITE),
-            Color.YELLOW: (curses.COLOR_YELLOW+8, curses.COLOR_WHITE),
-            Color.BLUE: (curses.COLOR_BLUE+8, curses.COLOR_WHITE),
-            Color.MAGENTA: (curses.COLOR_MAGENTA+8, curses.COLOR_WHITE),
-            Color.CYAN: (curses.COLOR_CYAN+8, curses.COLOR_WHITE),
-            Color.WHITE: (curses.COLOR_WHITE+8, curses.COLOR_WHITE)
-       },
-        8: {
-            Color.ORANGE: (curses.COLOR_YELLOW, curses.COLOR_WHITE),
-            Color.RED: (curses.COLOR_RED, curses.COLOR_WHITE),
-            Color.GREEN: (curses.COLOR_GREEN, curses.COLOR_WHITE),
-            Color.YELLOW: (curses.COLOR_WHITE, curses.COLOR_WHITE),
-            Color.BLUE: (curses.COLOR_BLUE, curses.COLOR_WHITE),
-            Color.MAGENTA: (curses.COLOR_MAGENTA, curses.COLOR_WHITE),
-            Color.CYAN: (curses.COLOR_CYAN, curses.COLOR_WHITE),
-            Color.WHITE: (curses.COLOR_WHITE, curses.COLOR_WHITE)
-        }
-    }
 
     def __init__(self, scr):
-        self.scr = scr
-
         if curses.has_colors():
             curses.use_default_colors()
             curses.start_color()
-            if curses.COLORS >= 16:
-                nb_colors = 16
-                if curses.can_change_color():
-                    curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
-            else:
-                nb_colors = 8
-            for color, (fg, bg) in self.COLOR_PAIRS[nb_colors].items():
-                curses.init_pair(color, fg, bg)
-
+            Mino.color_pairs[curses.COLOR_BLACK] = curses.color_pair(curses.COLOR_BLACK)
+            for color in range(1, 8):
+                curses.init_pair(color, color, curses.COLOR_WHITE)
+                Mino.color_pairs[color] = curses.color_pair(color)|curses.A_BOLD
+            if curses.can_change_color():
+                curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
+            Mino.color_pairs[curses.COLOR_ORANGE] = curses.color_pair(curses.COLOR_YELLOW)
         try:
             curses.curs_set(0)
         except curses.error:
             pass
-
-        self.scr.timeout(0)
-        self.scr.getch()
+        scr.timeout(0)
+        scr.getch()
+        self.scr = scr
 
         left_x = (curses.COLS-self.WIDTH) // 2
         top_y = (curses.LINES-self.HEIGHT) // 2
@@ -742,10 +708,8 @@ class Game:
         for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
             for x, char in enumerate(word, start=Matrix.NB_COLS//2-1):
                 color = self.matrix.cells[y][x]
-                if color == Color.BLACK:
-                    color = curses.color_pair(Color.BLACK) | curses.A_BOLD
-                else:
-                    color = curses.color_pair(color) | curses.A_REVERSE | curses.A_BOLD
+                if color != Mino.color_pairs[curses.COLOR_BLACK]:
+                    color |= curses.A_REVERSE
                 self.matrix.window.addstr(y, x*2+1, char, color)
         self.matrix.window.refresh()
         curses.beep()
