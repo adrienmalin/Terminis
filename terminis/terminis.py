@@ -583,7 +583,6 @@ class Game:
         if curses.has_colors():
             curses.use_default_colors()
             curses.start_color()
-            Mino.color_pairs[curses.COLOR_BLACK] = curses.color_pair(curses.COLOR_BLACK)
             for color in range(1, 8):
                 curses.init_pair(color, color, curses.COLOR_WHITE)
                 Mino.color_pairs[color] = curses.color_pair(color)|curses.A_BOLD
