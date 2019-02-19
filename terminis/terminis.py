@@ -63,7 +63,7 @@ class Movement:
 
 
 class Mino:
-    color_pairs = [0 for _ in range(9)]
+    color_pairs = [curses.COLOR_BLACK for color_pair in range(9)]
     
     def __init__(self, position, color):
         self.position = position
@@ -252,7 +252,6 @@ class Z(Tetromino):
 class Window:
     def __init__(self, width, height, begin_x, begin_y):
         self.window = curses.newwin(height, width, begin_y, begin_x)
-        self.has_colors = curses.has_colors()
         if self.TITLE:
             self.title_begin_x = (width-len(self.TITLE)) // 2 + 1
         self.piece = None
@@ -262,7 +261,7 @@ class Window:
         self.window.erase()
         self.window.border()
         if self.TITLE:
-            self.window.addstr(0, self.title_begin_x, self.TITLE)
+            self.window.addstr(0, self.title_begin_x, self.TITLE, curses.A_BOLD)
 
     def draw_piece(self):
         if self.piece:
@@ -276,10 +275,7 @@ class Window:
 
     def draw_mino(self, x, y, color):
         if y >= 0:
-            if self.has_colors:
-                self.window.addstr(y, x*2+1, "██", color)
-            else:
-                self.window.addstr(y, x*2+1, "██")
+            self.window.addstr(y, x*2+1, "██", color)
 
 
 class Matrix(Window):
@@ -295,7 +291,7 @@ class Matrix(Window):
         begin_y += (game.HEIGHT - self.HEIGHT) // 2
         self.game = game
         self.cells = [
-            [curses.COLOR_BLACK for x in range(self.NB_COLS)]
+            [None for x in range(self.NB_COLS)]
             for y in range(self.NB_LINES)
         ]
         Window.__init__(self, self.WIDTH, self.HEIGHT, begin_x, begin_y)
@@ -307,7 +303,7 @@ class Matrix(Window):
         else:
             for y, line in enumerate(self.cells):
                 for x, color in enumerate(line):
-                    if color:
+                    if color is not None:
                         self.draw_mino(x, y, color)
             self.draw_piece()
         self.window.refresh()
@@ -316,7 +312,7 @@ class Matrix(Window):
         return (
             0 <= position.x < self.NB_COLS
             and position.y < self.NB_LINES
-            and not (position.y >= 0 and self.cells[position.y][position.x])
+            and not (position.y >= 0 and self.cells[position.y][position.x] is not None)
         )
 
     def lock(self, t_spin):
@@ -332,7 +328,7 @@ class Matrix(Window):
         for y, line in enumerate(self.cells):
             if all(mino for mino in line):
                 self.cells.pop(y)
-                self.cells.insert(0, [curses.COLOR_BLACK for x in range(self.NB_COLS)])
+                self.cells.insert(0, [None for x in range(self.NB_COLS)])
                 nb_lines_cleared += 1
         self.game.stats.piece_locked(nb_lines_cleared, t_spin)
         self.game.new_piece()
@@ -708,8 +704,10 @@ class Game:
         for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
             for x, char in enumerate(word, start=Matrix.NB_COLS//2-1):
                 color = self.matrix.cells[y][x]
-                if color != Mino.color_pairs[curses.COLOR_BLACK]:
+                if color is not None:
                     color |= curses.A_REVERSE
+                else:
+                    color = curses.COLOR_BLACK
                 self.matrix.window.addstr(y, x*2+1, char, color)
         self.matrix.window.refresh()
         curses.beep()
