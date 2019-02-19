@@ -707,7 +707,7 @@ class Game:
                 if color is not None:
                     color |= curses.A_REVERSE
                 else:
-                    color = curses.COLOR_BLACK
+                    color = curses.COLOR_BLACK | curses.A_BOLD
                 self.matrix.window.addstr(y, x*2+1, char, color)
         self.matrix.window.refresh()
         curses.beep()
