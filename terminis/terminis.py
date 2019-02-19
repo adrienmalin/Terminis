@@ -581,7 +581,6 @@ class Game:
 
     def __init__(self, scr):
         if curses.has_colors():
-            curses.use_default_colors()
             curses.start_color()
             for color in range(1, 8):
                 curses.init_pair(color, color, curses.COLOR_WHITE)
@@ -700,6 +699,9 @@ class Game:
 
     def over(self):
         self.matrix.refresh()
+        if curses.has_colors():
+            for color in range(1, 8):
+                curses.init_pair(color, color, curses.COLOR_BLACK)
         for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
             for x, char in enumerate(word, start=Matrix.NB_COLS//2-1):
                 color = self.matrix.cells[y][x]
