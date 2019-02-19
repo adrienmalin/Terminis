@@ -274,15 +274,20 @@ class Window:
 
     def draw_piece(self):
         if self.piece:
-            color = Color.WHITE|curses.A_BLINK if self.piece.lock_timer else self.piece.COLOR
+            if self.piece.lock_timer:
+                color = Color.WHITE
+                attr = curses.A_BLINK
+            else:
+                color = self.piece.COLOR
+                attr = 0
             for mino in self.piece.minoes:
                 position = mino.position + self.piece.position
-                self.draw_mino(position.x, position.y, color)
+                self.draw_mino(position.x, position.y, color, attr)
 
-    def draw_mino(self, x, y, color):
+    def draw_mino(self, x, y, color=Color.WHITE, attr=0):
         if y >= 0:
             if self.has_colors:
-                self.window.addstr(y, x*2+1, "██", curses.color_pair(color))
+                self.window.addstr(y, x*2+1, "██", curses.color_pair(color)|attr)
             else:
                 self.window.addstr(y, x*2+1, "██")
 
