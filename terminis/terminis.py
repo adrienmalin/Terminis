@@ -63,7 +63,7 @@ class Movement:
 
 
 class Mino:
-    color_pairs = [None for _ in range(9)]
+    color_pairs = [0 for _ in range(9)]
     
     def __init__(self, position, color):
         self.position = position
