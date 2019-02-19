@@ -485,7 +485,7 @@ class Stats(Window):
 
     def save(self):
         if not os.path.exists(self.DIR_PATH):
-            os.mkdir(self.DIR_PATH)
+            os.makedirs(self.DIR_PATH)
         try:
             with open(self.FILE_PATH, mode='w') as f:
                 f.write(str(self.high_score))
@@ -541,7 +541,7 @@ class ControlsParser(configparser.SafeConfigParser):
         
     def reset(self):
         if not os.path.exists(self.DIR_PATH):
-            os.mkdir(self.DIR_PATH)
+            os.makedirs(self.DIR_PATH)
         try:
             with open(self.FILE_PATH, 'w') as f:
                 f.write(self.COMMENT)
