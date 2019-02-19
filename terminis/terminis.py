@@ -511,20 +511,24 @@ class ControlsParser(configparser.SafeConfigParser):
 # See https://docs.python.org/3/library/curses.html?highlight=curses#constants
 
 """
+    DEFAULTS = {
+        "MOVE LEFT": "KEY_LEFT",
+        "MOVE RIGHT": "KEY_RIGHT",
+        "SOFT DROP": "KEY_DOWN",
+        "HARD DROP": "SPACE",
+        "ROTATE CLOCKWISE": "ENTER",
+        "ROTATE COUNTER": "KEY_UP",
+        "HOLD": "h",
+        "PAUSE": "p",
+        "QUIT": "q"
+    }
 
     def __init__(self):
         configparser.SafeConfigParser.__init__(self)
         self.optionxform = str
         self.add_section(self.SECTION)
-        self["MOVE LEFT"] = "KEY_LEFT"
-        self["MOVE RIGHT"] = "KEY_RIGHT"
-        self["SOFT DROP"] = "KEY_DOWN"
-        self["HARD DROP"] = "SPACE"
-        self["ROTATE COUNTER"] = "KEY_UP"
-        self["ROTATE CLOCKWISE"] = "ENTER"
-        self["HOLD"] = "h"
-        self["PAUSE"] = "p"
-        self["QUIT"] = "q"
+        for action, key in self.DEFAULTS.items():
+            self[action] = key
         
         if not os.path.exists(self.FILE_PATH):
             self.reset()
@@ -728,6 +732,7 @@ class Game:
                 color = curses.color_pair(color)|curses.A_REVERSE if color else curses.color_pair(Color.BLACK)
                 self.matrix.window.addstr(y, x*2+1, char, color)
         self.matrix.window.refresh()
+        curses.beep()
         self.scr.timeout(-1)
         while self.scr.getkey() != self.controls["QUIT"]:
             pass
