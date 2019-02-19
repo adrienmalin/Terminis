@@ -332,7 +332,7 @@ class Matrix(Window):
             else:
                 self.game.over()
                 return
-                
+
         nb_lines_cleared = 0
         for y, line in enumerate(self.cells):
             if all(mino for mino in line):
@@ -529,16 +529,16 @@ class ControlsParser(configparser.SafeConfigParser):
         self.add_section(self.SECTION)
         for action, key in self.DEFAULTS.items():
             self[action] = key
-        
+
         if not os.path.exists(self.FILE_PATH):
             self.reset()
 
     def __getitem__(self, key):
         return self.get(self.SECTION, key)
-    
+
     def __setitem__(self, key, value):
         self.set(self.SECTION, key, value)
-        
+
     def reset(self):
         if not os.path.exists(self.DIR_PATH):
             os.makedirs(self.DIR_PATH)
@@ -562,7 +562,7 @@ class ControlsParser(configparser.SafeConfigParser):
 
 class ControlsWindow(Window, ControlsParser):
     TITLE = "CONTROLS"
-            
+
     def __init__(self, width, height, begin_x, begin_y):
         ControlsParser.__init__(self)
         self.read(self.FILE_PATH)
@@ -581,7 +581,7 @@ class ControlsWindow(Window, ControlsParser):
             key = key.replace("KEY_", "").upper()
             self.window.addstr(y, 2, "%s\t%s" % (key, action.upper()))
         self.window.refresh()
-    
+
 
 class Game:
     WIDTH = 80
@@ -766,7 +766,7 @@ def main():
         elif "--edit" in sys.argv[1:]:
             ControlsParser().edit()
         curses.wrapper(Game)
-        
+
 
 if __name__ == "__main__":
     main()
