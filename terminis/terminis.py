@@ -587,6 +587,28 @@ class Game:
     WIDTH = 80
     HEIGHT = Matrix.HEIGHT
     AUTOREPEAT_DELAY = 0.02
+    COLOR_PAIRS = {
+        8: {
+            Color.ORANGE: (curses.COLOR_YELLOW, curses.COLOR_BLACK),
+            Color.RED: (curses.COLOR_RED+8, curses.COLOR_BLACK),
+            Color.GREEN: (curses.COLOR_GREEN+8, curses.COLOR_BLACK),
+            Color.YELLOW: (curses.COLOR_YELLOW+8, curses.COLOR_BLACK),
+            Color.BLUE: (curses.COLOR_BLUE+8, curses.COLOR_BLACK),
+            Color.MAGENTA: (curses.COLOR_MAGENTA+8, curses.COLOR_BLACK),
+            Color.CYAN: (curses.COLOR_CYAN+8, curses.COLOR_BLACK),
+            Color.WHITE: (curses.COLOR_WHITE+8, curses.COLOR_BLACK)
+       },
+        16: {
+            Color.ORANGE: (curses.COLOR_YELLOW, curses.COLOR_BLACK),
+            Color.RED: (curses.COLOR_RED, curses.COLOR_BLACK),
+            Color.GREEN: (curses.COLOR_GREEN, curses.COLOR_BLACK),
+            Color.YELLOW: (curses.COLOR_WHITE, curses.COLOR_BLACK),
+            Color.BLUE: (curses.COLOR_BLUE, curses.COLOR_BLACK),
+            Color.MAGENTA: (curses.COLOR_MAGENTA, curses.COLOR_BLACK),
+            Color.CYAN: (curses.COLOR_CYAN, curses.COLOR_BLACK),
+            Color.WHITE: (curses.COLOR_WHITE, curses.COLOR_BLACK)
+        }
+    }
 
     def __init__(self, scr):
         self.scr = scr
@@ -595,25 +617,13 @@ class Game:
             curses.use_default_colors()
             curses.start_color()
             if curses.COLORS >= 16:
+                nb_colors = 16
                 if curses.can_change_color():
                     curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
-                curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-                curses.init_pair(Color.RED, curses.COLOR_RED+8, curses.COLOR_BLACK)
-                curses.init_pair(Color.GREEN, curses.COLOR_GREEN+8, curses.COLOR_BLACK)
-                curses.init_pair(Color.YELLOW, curses.COLOR_YELLOW+8, curses.COLOR_BLACK)
-                curses.init_pair(Color.BLUE, curses.COLOR_BLUE+8, curses.COLOR_BLACK)
-                curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA+8, curses.COLOR_BLACK)
-                curses.init_pair(Color.CYAN, curses.COLOR_CYAN+8, curses.COLOR_BLACK)
-                curses.init_pair(Color.WHITE, curses.COLOR_WHITE+8, curses.COLOR_BLACK)
             else:
-                curses.init_pair(Color.ORANGE, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-                curses.init_pair(Color.RED, curses.COLOR_RED, curses.COLOR_BLACK)
-                curses.init_pair(Color.GREEN, curses.COLOR_GREEN, curses.COLOR_BLACK)
-                curses.init_pair(Color.YELLOW, curses.COLOR_WHITE, curses.COLOR_BLACK)
-                curses.init_pair(Color.BLUE, curses.COLOR_BLUE, curses.COLOR_BLACK)
-                curses.init_pair(Color.MAGENTA, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
-                curses.init_pair(Color.CYAN, curses.COLOR_CYAN, curses.COLOR_BLACK)
-                curses.init_pair(Color.WHITE, curses.COLOR_WHITE, curses.COLOR_BLACK)
+                nb_colors = 8
+            for color, (fg, bg) in self.COLOR_PAIRS[nb_colors].items():
+                curses.init_pair(color, fg, bg)
 
         try:
             curses.curs_set(0)
