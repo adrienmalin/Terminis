@@ -216,10 +216,11 @@ class T(Tetromino):
 
     def t_spin(self):
         if self.rotated_last:
-            a = not self.matrix.is_free_cell(self.position + self.T_SLOT[self.orientation])
-            b = not self.matrix.is_free_cell(self.position + self.T_SLOT[(1+self.orientation)%4])
-            c = not self.matrix.is_free_cell(self.position + self.T_SLOT[(3+self.orientation)%4])
-            d = not self.matrix.is_free_cell(self.position + self.T_SLOT[(2+self.orientation)%4])
+            a = not self.matrix.is_free_cell(self.position+self.T_SLOT[self.orientation])
+            b = not self.matrix.is_free_cell(self.position+self.T_SLOT[(1+self.orientation)%4])
+            c = not self.matrix.is_free_cell(self.position+self.T_SLOT[(3+self.orientation)%4])
+            d = not self.matrix.is_free_cell(self.position+self.T_SLOT[(2+self.orientation)%4])
+            
             if self.rotation_point_5_used or (a and b and (c or d)):
                 return "T-SPIN"
             elif c and d and (a or b):
@@ -324,6 +325,7 @@ class Matrix(Window):
                 self.cells.pop(y)
                 self.cells.insert(0, [None for x in range(self.NB_COLS)])
                 nb_lines_cleared += 1
+                
         self.game.stats.piece_locked(nb_lines_cleared, t_spin)
         self.game.start_next_piece()
 
@@ -440,6 +442,7 @@ class Stats(Window):
 
     def piece_locked(self, nb_lines, t_spin):
         self.strings = []
+        
         if t_spin:
             self.strings.append(t_spin)
         if nb_lines:
@@ -447,6 +450,7 @@ class Stats(Window):
             self.combo += 1
         else:
             self.combo = -1
+            
         if nb_lines or t_spin:
             self.lines_cleared += nb_lines
             ds = self.SCORES[nb_lines][t_spin]
@@ -454,11 +458,13 @@ class Stats(Window):
             ds *= 100 * self.level
             self.score += ds
             self.strings.append(str(ds))
+            
         if self.combo >= 1:
             self.strings.append("COMBO x%d" % self.combo)
             ds = (20 if nb_lines==1 else 50) * self.combo * self.level
             self.score += ds
             self.strings.append(str(ds))
+            
         if nb_lines == 4 or (nb_lines and t_spin):
             curses.beep()
         if self.score > self.high_score:
