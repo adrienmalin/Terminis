@@ -618,7 +618,7 @@ class Game:
         self.stats.time = time.time()
         self.stats.clock_timer = scheduler.enter(1, 3, self.stats.clock, tuple())
         self.random_bag = []
-        self.next.piece = self.random_piece()(self.matrix, Next.PIECE_POSITION)
+        self.next.piece = self.random_piece()
         self.new_piece()
         self.input_timer = scheduler.enter(self.AUTOREPEAT_DELAY, 2, self.process_input, tuple())
 
@@ -631,12 +631,12 @@ class Game:
         if not self.random_bag:
             self.random_bag = list(self.TETROMINOES)
             random.shuffle(self.random_bag)
-        return self.random_bag.pop()
+        return self.random_bag.pop()(self.matrix, Next.PIECE_POSITION)
 
     def new_piece(self, held_piece=None):
         if not held_piece:
             self.matrix.piece = self.next.piece
-            self.next.piece = self.random_piece()(self.matrix, Next.PIECE_POSITION)
+            self.next.piece = self.random_piece()
             self.next.refresh()
         self.matrix.piece.position = Matrix.PIECE_POSITION
         if self.matrix.piece.move(Movement.STILL, lock=False):
