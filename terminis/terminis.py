@@ -683,8 +683,7 @@ class Game:
                 self.matrix.piece.lock_timer = None
             self.matrix.piece, self.hold.piece = self.hold.piece, self.matrix.piece
             self.hold.piece.position = self.hold.PIECE_POSITION
-            for mino, position in zip(self.hold.piece.minoes, self.hold.piece.MINOES_POSITIONS):
-                mino.position = position
+            self.hold.piece.minoes_positions = self.hold.piece.MINOES_POSITIONS
             self.hold.piece.hold_enabled = False
             self.hold.refresh()
             self.new_piece(self.matrix.piece)
