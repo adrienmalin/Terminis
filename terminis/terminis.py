@@ -106,8 +106,7 @@ class Tetromino:
             for mino_position in self.minoes_position
         ):
             self.position = potential_position
-            if lock:
-                self.postpone_lock()
+            self.postpone_lock()
             self.rotated_last = False
             self.matrix.refresh()
             return True
