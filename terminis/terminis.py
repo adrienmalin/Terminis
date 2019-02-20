@@ -578,8 +578,8 @@ class Game:
             if curses.can_change_color():
                 curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
             color_pairs[curses.COLOR_ORANGE] = curses.color_pair(curses.COLOR_YELLOW)
-            for tetromino_class in self.TETROMINOES:
-                tetromino_class.color_pair = color_pairs[tetromino_class.COLOR]
+        for tetromino_class in self.TETROMINOES:
+            tetromino_class.color_pair = color_pairs[tetromino_class.COLOR]
         try:
             curses.curs_set(0)
         except curses.error:
