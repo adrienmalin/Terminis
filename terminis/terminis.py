@@ -98,14 +98,21 @@ class Tetromino:
         self.lock_timer = None
         self.fall_timer = None
         self.hold_enabled = True
-
-    def move(self, movement, lock=True):
+        
+    def possible_position(self, minoes_position, movement):
         potential_position = self.position + movement
         if all(
             self.matrix.is_free_cell(mino_position+potential_position)
-            for mino_position in self.minoes_position
+            for mino_position in minoes_position
         ):
-            self.position = potential_position
+            return potential_position
+        else:
+            return None
+
+    def move(self, movement, lock=True):
+        possible_position = self.possible_position(self.minoes_position, movement)
+        if possible_position:
+            self.position = possible_position
             self.postpone_lock()
             self.rotated_last = False
             self.matrix.refresh()
@@ -134,13 +141,10 @@ class Tetromino:
             for mino_position in self.minoes_position
         )
         for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
-            potential_position = self.position + liberty_degree
-            if all(
-                self.matrix.is_free_cell(potential_mino_position+potential_position)
-                for potential_mino_position in potential_minoes_positions
-            ):
+            possible_position = self.possible_position(potential_minoes_positions, liberty_degree)
+            if possible_position:
                 self.orientation = (self.orientation+direction) % 4
-                self.position = potential_position
+                self.position = possible_position
                 self.minoes_position = potential_minoes_positions
                 self.postpone_lock()
                 self.rotated_last = True
@@ -167,7 +171,7 @@ class Tetromino:
 
     def lock(self):
         self.lock_timer = None
-        if not self.move(Movement.DOWN, lock=False):
+        if not self.possible_position(self.minoes_position, Movement.DOWN):
             if self.fall_timer:
                 self.fall_timer = scheduler.cancel(self.fall_timer)
             self.matrix.lock(self.t_spin())
@@ -642,8 +646,9 @@ class Game:
             
     def start_piece(self):
         self.matrix.piece.position = Matrix.PIECE_POSITION
-        if self.matrix.piece.move(Movement.STILL, lock=False):
+        if self.matrix.piece.possible_position(self.matrix.piece.minoes_position, Movement.STILL):
             self.matrix.piece.fall_timer = scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
+            self.matrix.refresh()
         else:
             self.over()
 
@@ -686,7 +691,7 @@ class Game:
                 
             self.matrix.piece, self.hold.piece = self.hold.piece, self.matrix.piece
             self.hold.piece.position = self.hold.PIECE_POSITION
-            self.hold.piece.minoes_positions = self.hold.piece.MINOES_POSITIONS
+            self.hold.piece.minoes_position = self.hold.piece.MINOES_POSITIONS
             self.hold.piece.hold_enabled = False
             self.hold.refresh()
             
