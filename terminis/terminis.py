@@ -690,7 +690,7 @@ class Game:
 
     def over(self):
         self.matrix.refresh()
-        if False:#curses.has_colors():
+        if curses.has_colors():
             for tetromino_class in self.TETROMINOES: 
                 curses.init_pair(tetromino_class.COLOR, tetromino_class.COLOR, curses.COLOR_BLACK)
         for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
