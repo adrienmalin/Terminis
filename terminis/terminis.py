@@ -694,13 +694,13 @@ class Game:
             for tetromino_class in self.TETROMINOES: 
                 curses.init_pair(tetromino_class.COLOR, tetromino_class.COLOR, curses.COLOR_BLACK)
         for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
-            for x, char in enumerate(word, start=Matrix.NB_COLS//2-1):
+            for x, syllable in enumerate(word, start=Matrix.NB_COLS//2-1):
                 color = self.matrix.cells[y][x]
                 if color is None:
                     color = curses.COLOR_BLACK
                 else:
                     color |= curses.A_REVERSE
-                self.matrix.window.addstr(y, x*2+1, char, color)
+                self.matrix.window.addstr(y, x*2+1, syllable, color)
         self.matrix.window.refresh()
         curses.beep()
         self.scr.timeout(-1)
