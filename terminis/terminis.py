@@ -62,14 +62,6 @@ class Movement:
     STILL = Point(0, 0)
 
 
-class Mino:
-    color_pairs = [curses.COLOR_BLACK for color_pair in range(9)]
-    
-    def __init__(self, position, color):
-        self.position = position
-        self.color_pair = self.color_pairs[color]
-
-
 class Tetromino:
     SUPER_ROTATION_SYSTEM = (
         {
@@ -95,10 +87,7 @@ class Tetromino:
     def __init__(self, matrix, position):
         self.matrix = matrix
         self.position = position
-        self.minoes = tuple(
-            Mino(position, self.COLOR)
-            for position in self.MINOES_POSITIONS
-        )
+        self.minoes_position = self.MINOES_POSITIONS
         self.orientation = 0
         self.rotation_point_5_used = False
         self.rotated_last = False
@@ -109,8 +98,8 @@ class Tetromino:
     def move(self, movement, lock=True):
         potential_position = self.position + movement
         if all(
-            self.matrix.is_free_cell(mino.position+potential_position)
-            for mino in self.minoes
+            self.matrix.is_free_cell(mino_position+potential_position)
+            for mino_position in self.minoes_position
         ):
             self.position = potential_position
             self.postpone_lock()
@@ -138,8 +127,8 @@ class Tetromino:
 
     def rotate(self, direction):
         potential_minoes_positions = tuple(
-            Point(-direction*mino.position.y, direction*mino.position.x)
-            for mino in self.minoes
+            Point(-direction*mino_position.y, direction*mino_position.x)
+            for mino_position in self.minoes_position
         )
         for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
             potential_position = self.position + liberty_degree
@@ -149,8 +138,7 @@ class Tetromino:
             ):
                 self.orientation = (self.orientation+direction) % 4
                 self.position = potential_position
-                for mino, potential_mino_position in zip(self.minoes, potential_minoes_positions):
-                    mino.position = potential_mino_position
+                self.minoes_position = potential_minoes_positions
                 self.postpone_lock()
                 self.rotated_last = True
                 if rotation_point == 5:
@@ -266,16 +254,16 @@ class Window:
     def draw_piece(self):
         if self.piece:
             if self.piece.lock_timer:
-                attr = Mino.color_pairs[self.piece.COLOR] | curses.A_BLINK | curses.A_REVERSE
+                attr = self.piece.color_pair | curses.A_BLINK | curses.A_REVERSE
             else:
-                attr = Mino.color_pairs[self.piece.COLOR]
-            for mino in self.piece.minoes:
-                position = mino.position + self.piece.position
+                attr = self.piece.color_pair
+            for mino_position in self.piece.minoes_position:
+                position = mino_position + self.piece.position
                 self.draw_mino(position.x, position.y, attr)
 
-    def draw_mino(self, x, y, color):
+    def draw_mino(self, x, y, attr):
         if y >= 0:
-            self.window.addstr(y, x*2+1, "██", color)
+            self.window.addstr(y, x*2+1, "██", attr)
 
 
 class Matrix(Window):
@@ -316,10 +304,10 @@ class Matrix(Window):
         )
 
     def lock(self, t_spin):
-        for mino in self.piece.minoes:
-            position = mino.position + self.piece.position
+        for mino_position in self.piece.minoes_position:
+            position = mino_position + self.piece.position
             if position.y >= 0:
-                self.cells[position.y][position.x] = mino.color_pair
+                self.cells[position.y][position.x] = self.piece.color_pair
             else:
                 self.game.over()
                 return
@@ -578,16 +566,20 @@ class Game:
     WIDTH = 80
     HEIGHT = Matrix.HEIGHT
     AUTOREPEAT_DELAY = 0.02
+    TETROMINOES = (O, I, T, L, J, S, Z)
 
     def __init__(self, scr):
+        color_pairs = [curses.COLOR_BLACK for color_pair in range(9)]
         if curses.has_colors():
             curses.start_color()
             for color in range(1, 8):
                 curses.init_pair(color, color, curses.COLOR_WHITE)
-                Mino.color_pairs[color] = curses.color_pair(color)|curses.A_BOLD
+                color_pairs[color] = curses.color_pair(color)|curses.A_BOLD
             if curses.can_change_color():
                 curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
-            Mino.color_pairs[curses.COLOR_ORANGE] = curses.color_pair(curses.COLOR_YELLOW)
+            color_pairs[curses.COLOR_ORANGE] = curses.color_pair(curses.COLOR_YELLOW)
+            for tetromino_class in self.TETROMINOES:
+                tetromino_class.color_pair = color_pairs[tetromino_class.COLOR]
         try:
             curses.curs_set(0)
         except curses.error:
@@ -637,7 +629,7 @@ class Game:
 
     def random_piece(self):
         if not self.random_bag:
-            self.random_bag = [O, I, T, L, J, S, Z]
+            self.random_bag = list(self.TETROMINOES)
             random.shuffle(self.random_bag)
         return self.random_bag.pop()
 
