@@ -696,10 +696,10 @@ class Game:
         for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
             for x, char in enumerate(word, start=Matrix.NB_COLS//2-1):
                 color = self.matrix.cells[y][x]
-                if color is not None:
-                    color |= curses.A_REVERSE
-                else:
+                if color is None:
                     color = curses.COLOR_BLACK
+                else:
+                    color |= curses.A_REVERSE
                 self.matrix.window.addstr(y, x*2+1, char, color)
         self.matrix.window.refresh()
         curses.beep()
