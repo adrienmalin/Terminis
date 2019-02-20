@@ -83,6 +83,7 @@ class Tetromino:
     )
     lock_delay = 0.5
     fall_delay = 1
+    color_pair = curses.COLOR_BLACK
 
     def __init__(self, matrix, position):
         self.matrix = matrix
@@ -569,17 +570,16 @@ class Game:
     TETROMINOES = (O, I, T, L, J, S, Z)
 
     def __init__(self, scr):
-        color_pairs = [curses.COLOR_BLACK for color_pair in range(9)]
         if curses.has_colors():
             curses.start_color()
-            for color in range(1, 8):
-                curses.init_pair(color, color, curses.COLOR_WHITE)
-                color_pairs[color] = curses.color_pair(color)|curses.A_BOLD
             if curses.can_change_color():
                 curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
-            color_pairs[curses.COLOR_ORANGE] = curses.color_pair(curses.COLOR_YELLOW)
-        for tetromino_class in self.TETROMINOES:
-            tetromino_class.color_pair = color_pairs[tetromino_class.COLOR]
+            for tetromino_class in self.TETROMINOES: 
+                curses.init_pair(tetromino_class.COLOR, tetromino_class.COLOR, curses.COLOR_WHITE)
+                if tetromino_class.COLOR == curses.COLOR_ORANGE:
+                    tetromino_class.color_pair = curses.color_pair(curses.COLOR_YELLOW)
+                else:
+                    tetromino_class.color_pair = curses.color_pair(tetromino_class.COLOR)|curses.A_BOLD
         try:
             curses.curs_set(0)
         except curses.error:
@@ -690,16 +690,16 @@ class Game:
 
     def over(self):
         self.matrix.refresh()
-        if curses.has_colors():
-            for color in range(1, 8):
-                curses.init_pair(color, color, curses.COLOR_BLACK)
+        if False:#curses.has_colors():
+            for tetromino_class in self.TETROMINOES: 
+                curses.init_pair(tetromino_class.COLOR, tetromino_class.COLOR, curses.COLOR_BLACK)
         for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
             for x, char in enumerate(word, start=Matrix.NB_COLS//2-1):
                 color = self.matrix.cells[y][x]
                 if color is not None:
                     color |= curses.A_REVERSE
                 else:
-                    color = curses.COLOR_BLACK | curses.A_BOLD
+                    color = curses.COLOR_BLACK
                 self.matrix.window.addstr(y, x*2+1, char, color)
         self.matrix.window.refresh()
         curses.beep()
