@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+
 try:
     import curses
 except ImportError:
@@ -11,12 +12,14 @@ pip install --user windows-curses"""
     )
 else:
     curses.COLOR_ORANGE = 8
+    
 import random
 import sched
 import time
 import os
 import locale
 import subprocess
+
 try:
     import configparser
 except ImportError:
@@ -56,9 +59,9 @@ class Point:
 
 
 class Movement:
-    LEFT = Point(-1, 0)
+    LEFT  = Point(-1, 0)
     RIGHT = Point(1, 0)
-    DOWN = Point(0, 1)
+    DOWN  = Point(0, 1)
     STILL = Point(0, 0)
 
 
@@ -103,7 +106,8 @@ class Tetromino:
             for mino_position in self.minoes_position
         ):
             self.position = potential_position
-            self.postpone_lock()
+            if lock:
+                self.postpone_lock()
             self.rotated_last = False
             self.matrix.refresh()
             return True
@@ -660,6 +664,7 @@ class Game:
         self.matrix.refresh(paused=True)
         self.next.refresh(paused=True)
         self.scr.timeout(-1)
+        
         while True:
             key = self.scr.getkey()
             if key == self.controls["QUIT"]:
@@ -679,11 +684,13 @@ class Game:
                 self.matrix.piece.fall_timer = scheduler.cancel(self.matrix.piece.fall_timer)
             if self.matrix.piece.lock_timer:
                 self.matrix.piece.lock_timer = scheduler.cancel(self.matrix.piece.lock_timer)
+                
             self.matrix.piece, self.hold.piece = self.hold.piece, self.matrix.piece
             self.hold.piece.position = self.hold.PIECE_POSITION
             self.hold.piece.minoes_positions = self.hold.piece.MINOES_POSITIONS
             self.hold.piece.hold_enabled = False
             self.hold.refresh()
+            
             if self.matrix.piece:
                 self.start_piece()
             else:
