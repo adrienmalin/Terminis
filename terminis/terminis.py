@@ -118,8 +118,7 @@ class Tetromino:
 
     def hard_drop(self):
         if self.lock_timer:
-            scheduler.cancel(self.lock_timer)
-            self.lock_timer = None
+            self.lock_timer = scheduler.cancel(self.lock_timer)
         lines = 0
         while self.move(Movement.DOWN, lock=False):
             lines += 2
@@ -167,8 +166,7 @@ class Tetromino:
         self.lock_timer = None
         if not self.move(Movement.DOWN, lock=False):
             if self.fall_timer:
-                scheduler.cancel(self.fall_timer)
-                self.fall_timer = None
+                self.fall_timer = scheduler.cancel(self.fall_timer)
             self.matrix.lock(self.t_spin())
 
     def t_spin(self):
@@ -320,7 +318,7 @@ class Matrix(Window):
                 self.cells.insert(0, [None for x in range(self.NB_COLS)])
                 nb_lines_cleared += 1
         self.game.stats.piece_locked(nb_lines_cleared, t_spin)
-        self.game.new_piece()
+        self.game.start_next_piece()
 
 
 class HoldNext(Window):
@@ -619,7 +617,7 @@ class Game:
         self.stats.clock_timer = scheduler.enter(1, 3, self.stats.clock, tuple())
         self.random_bag = []
         self.next.piece = self.random_piece()
-        self.new_piece()
+        self.start_next_piece()
         self.input_timer = scheduler.enter(self.AUTOREPEAT_DELAY, 2, self.process_input, tuple())
 
         try:
@@ -633,11 +631,13 @@ class Game:
             random.shuffle(self.random_bag)
         return self.random_bag.pop()(self.matrix, Next.PIECE_POSITION)
 
-    def new_piece(self, held_piece=None):
-        if not held_piece:
-            self.matrix.piece = self.next.piece
-            self.next.piece = self.random_piece()
-            self.next.refresh()
+    def start_next_piece(self):
+        self.matrix.piece = self.next.piece
+        self.next.piece = self.random_piece()
+        self.next.refresh()
+        self.start_piece()
+            
+    def start_piece(self):
         self.matrix.piece.position = Matrix.PIECE_POSITION
         if self.matrix.piece.move(Movement.STILL, lock=False):
             self.matrix.piece.fall_timer = scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
@@ -676,17 +676,18 @@ class Game:
     def swap(self):
         if self.matrix.piece.hold_enabled:
             if self.matrix.piece.fall_timer:
-                scheduler.cancel(self.matrix.piece.fall_timer)
-                self.matrix.piece.fall_timer = None
+                self.matrix.piece.fall_timer = scheduler.cancel(self.matrix.piece.fall_timer)
             if self.matrix.piece.lock_timer:
-                scheduler.cancel(self.matrix.piece.lock_timer)
-                self.matrix.piece.lock_timer = None
+                self.matrix.piece.lock_timer = scheduler.cancel(self.matrix.piece.lock_timer)
             self.matrix.piece, self.hold.piece = self.hold.piece, self.matrix.piece
             self.hold.piece.position = self.hold.PIECE_POSITION
             self.hold.piece.minoes_positions = self.hold.piece.MINOES_POSITIONS
             self.hold.piece.hold_enabled = False
             self.hold.refresh()
-            self.new_piece(self.matrix.piece)
+            if self.matrix.piece:
+                self.start_piece()
+            else:
+                self.start_next_piece()
 
     def over(self):
         self.matrix.refresh()
@@ -711,17 +712,13 @@ class Game:
     def quit(self):
         self.playing = False
         if self.matrix.piece.fall_timer:
-            scheduler.cancel(self.matrix.piece.fall_timer)
-            self.matrix.piece.fall_timer = None
+            self.matrix.piece.fall_timer = scheduler.cancel(self.matrix.piece.fall_timer)
         if self.matrix.piece.lock_timer:
-            scheduler.cancel(self.matrix.piece.lock_timer)
-            self.matrix.piece.lock_timer = None
+            self.matrix.piece.lock_timer = scheduler.cancel(self.matrix.piece.lock_timer)
         if self.stats.clock_timer:
-            scheduler.cancel(self.stats.clock_timer)
-            self.stats.clock_timer = None
+            self.stats.clock_timer = scheduler.cancel(self.stats.clock_timer)
         if self.input_timer:
-            scheduler.cancel(self.input_timer)
-            self.input_timer = None
+            self.input_timer = scheduler.cancel(self.input_timer)
         self.stats.save()
 
 
