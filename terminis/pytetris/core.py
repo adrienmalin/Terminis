@@ -136,13 +136,13 @@ class Z(Tetromino):
 
 class Matrix:
     NB_COLS = 10
-    NB_LINES = 20
+    NB_ROWS = 40
     PIECE_POSITION = Point(4, 0)
 
     def __init__(self):
         self.cells = [
             [Mino.NO_MINO for x in range(self.NB_COLS)]
-            for y in range(self.NB_LINES)
+            for y in range(self.NB_ROWS)
         ]
 
     def is_free_cell(self, position):
@@ -170,43 +170,6 @@ class Matrix:
 
 
 class Stats(Window):
-    SCORES = (
-        {"": 0, "MINI T-SPIN": 1, "T-SPIN": 4},
-        {"": 1, "MINI T-SPIN": 2, "T-SPIN": 8},
-        {"": 3, "T-SPIN": 12},
-        {"": 5, "T-SPIN": 16},
-        {"": 8}
-    )
-    LINES_CLEARED_NAMES = ("", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS")
-    TITLE = "STATS"
-    FILE_NAME = ".high_score"
-    if sys.platform == "win32":
-        DIR_PATH = os.environ.get("appdata", os.path.expanduser("~\Appdata\Roaming"))
-    else:
-        DIR_PATH = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
-    DIR_PATH = os.path.join(DIR_PATH, DIR_NAME)
-    FILE_PATH = os.path.join(DIR_PATH, FILE_NAME)
-
-    def __init__(self, game, width, height, begin_x, begin_y):
-        for arg in sys.argv[1:]:
-            if arg.startswith("--level="):
-                try:
-                    self.level = int(arg[8:])
-                except ValueError:
-                    sys.exit(HELP_MSG)
-                else:
-                    self.level = max(1, self.level)
-                    self.level = min(15, self.level)
-                    self.level -= 1
-                    break
-        else:
-            self.level = 0
-
-        self.game = game
-        self.width = width
-        self.height = height
-        self.goal = 0
-        self.score = 0
         try:
             with open(self.FILE_PATH, "r") as f:
                self.high_score = int(f.read())
@@ -251,6 +214,7 @@ class Game:
         {"name": "TRIPLE", "": 5, "T-SPIN": 16},
         {"name": "TETRIS", "": 8}
     )
+    LEN_NEXT_QUEUE = 1
 
     def __init__(self, level=1):
         self.matrix = Matrix()
@@ -258,8 +222,9 @@ class Game:
         self.start_next_piece()
         self.score = 0
         self.level = level - 1
+        self.combo = -1
         self.random_bag = []
-        self.next_piece = self.random_piece()
+        self.next_queue = [self.random_piece() for _ in range(self.LEN_NEXT_QUEUE)]
         self.held_piece = None
         self.time = time.time()
         self.playing = True
