@@ -354,13 +354,12 @@ class Next(HoldNext):
 
 class Stats(Window):
     SCORES = (
-        {"": 0, "MINI T-SPIN": 1, "T-SPIN": 4},
-        {"": 1, "MINI T-SPIN": 2, "T-SPIN": 8},
-        {"": 3, "T-SPIN": 12},
-        {"": 5, "T-SPIN": 16},
-        {"": 8}
+        {"name": "", "": 0, "MINI T-SPIN": 1, "T-SPIN": 4},
+        {"name": "SINGLE", "": 1, "MINI T-SPIN": 2, "T-SPIN": 8},
+        {"name": "DOUBLE", "": 3, "T-SPIN": 12},
+        {"name": "TRIPLE", "": 5, "T-SPIN": 16},
+        {"name": "TETRIS", "": 8}
     )
-    LINES_CLEARED_NAMES = ("", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS")
     TITLE = "STATS"
     FILE_NAME = ".high_score"
     if sys.platform == "win32":
@@ -446,7 +445,7 @@ class Stats(Window):
         if t_spin:
             self.strings.append(t_spin)
         if nb_lines:
-            self.strings.append(self.LINES_CLEARED_NAMES[nb_lines])
+            self.strings.append(self.SCORES[nb_lines]["name"])
             self.combo += 1
         else:
             self.combo = -1
