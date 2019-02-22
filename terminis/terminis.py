@@ -62,7 +62,6 @@ class Movement:
     LEFT  = Point(-1, 0)
     RIGHT = Point(1, 0)
     DOWN  = Point(0, 1)
-    STILL = Point(0, 0)
 
 
 class Tetromino:
@@ -91,28 +90,18 @@ class Tetromino:
     def __init__(self, matrix, position):
         self.matrix = matrix
         self.position = position
-        self.minoes_position = self.MINOES_POSITIONS
+        self.minoes_positions = self.MINOES_POSITIONS
         self.orientation = 0
         self.rotation_point_5_used = False
         self.rotated_last = False
         self.lock_timer = None
         self.fall_timer = None
         self.hold_enabled = True
-        
-    def possible_position(self, minoes_position, movement):
-        potential_position = self.position + movement
-        if all(
-            self.matrix.is_free_cell(mino_position+potential_position)
-            for mino_position in minoes_position
-        ):
-            return potential_position
-        else:
-            return None
 
     def move(self, movement, lock=True):
-        possible_position = self.possible_position(self.minoes_position, movement)
-        if possible_position:
-            self.position = possible_position
+        potential_position = self.position + movement
+        if self.matrix.shape_fits(potential_position, self.minoes_positions):
+            self.position = potential_position
             self.postpone_lock()
             self.rotated_last = False
             self.matrix.refresh()
@@ -138,14 +127,14 @@ class Tetromino:
     def rotate(self, direction):
         potential_minoes_positions = tuple(
             Point(-direction*mino_position.y, direction*mino_position.x)
-            for mino_position in self.minoes_position
+            for mino_position in self.minoes_positions
         )
         for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
-            possible_position = self.possible_position(potential_minoes_positions, liberty_degree)
-            if possible_position:
+            potential_position = self.position + liberty_degree
+            if self.matrix.shape_fits(potential_position, potential_minoes_positions):
                 self.orientation = (self.orientation+direction) % 4
-                self.position = possible_position
-                self.minoes_position = potential_minoes_positions
+                self.position = potential_position
+                self.minoes_positions = potential_minoes_positions
                 self.postpone_lock()
                 self.rotated_last = True
                 if rotation_point == 5:
@@ -171,7 +160,7 @@ class Tetromino:
 
     def lock(self):
         self.lock_timer = None
-        if not self.possible_position(self.minoes_position, Movement.DOWN):
+        if not self.matrix.shape_fits(self.position+Movement.DOWN, self.minoes_positions):
             if self.fall_timer:
                 self.fall_timer = scheduler.cancel(self.fall_timer)
             self.matrix.lock(self.t_spin())
@@ -264,7 +253,7 @@ class Window:
                 attr = self.piece.color_pair | curses.A_BLINK | curses.A_REVERSE
             else:
                 attr = self.piece.color_pair
-            for mino_position in self.piece.minoes_position:
+            for mino_position in self.piece.minoes_positions:
                 position = mino_position + self.piece.position
                 self.draw_mino(position.x, position.y, attr)
 
@@ -309,9 +298,15 @@ class Matrix(Window):
             and position.y < self.NB_LINES
             and not (position.y >= 0 and self.cells[position.y][position.x] is not None)
         )
+        
+    def shape_fits(self, piece_position, MINOES_POSITIONS):
+        return all(
+            self.is_free_cell(piece_position+mino_position)
+            for mino_position in MINOES_POSITIONS
+        )
 
     def lock(self, t_spin):
-        for mino_position in self.piece.minoes_position:
+        for mino_position in self.piece.minoes_positions:
             position = mino_position + self.piece.position
             if position.y >= 0:
                 self.cells[position.y][position.x] = self.piece.color_pair
@@ -354,13 +349,12 @@ class Next(HoldNext):
 
 class Stats(Window):
     SCORES = (
-        {"": 0, "MINI T-SPIN": 1, "T-SPIN": 4},
-        {"": 1, "MINI T-SPIN": 2, "T-SPIN": 8},
-        {"": 3, "T-SPIN": 12},
-        {"": 5, "T-SPIN": 16},
-        {"": 8}
+        {"name": "", "": 0, "MINI T-SPIN": 1, "T-SPIN": 4},
+        {"name": "SINGLE", "": 1, "MINI T-SPIN": 2, "T-SPIN": 8},
+        {"name": "DOUBLE", "": 3, "T-SPIN": 12},
+        {"name": "TRIPLE", "": 5, "T-SPIN": 16},
+        {"name": "TETRIS", "": 8}
     )
-    LINES_CLEARED_NAMES = ("", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS")
     TITLE = "STATS"
     FILE_NAME = ".high_score"
     if sys.platform == "win32":
@@ -446,7 +440,7 @@ class Stats(Window):
         if t_spin:
             self.strings.append(t_spin)
         if nb_lines:
-            self.strings.append(self.LINES_CLEARED_NAMES[nb_lines])
+            self.strings.append(self.SCORES[nb_lines]["name"])
             self.combo += 1
         else:
             self.combo = -1
@@ -652,7 +646,7 @@ class Game:
             
     def start_piece(self):
         self.matrix.piece.position = Matrix.PIECE_POSITION
-        if self.matrix.piece.possible_position(self.matrix.piece.minoes_position, Movement.STILL):
+        if self.matrix.shape_fits(self.matrix.piece.position, self.matrix.piece.minoes_positions):
             self.matrix.piece.fall_timer = scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
             self.matrix.refresh()
         else:
@@ -697,7 +691,7 @@ class Game:
                 
             self.matrix.piece, self.hold.piece = self.hold.piece, self.matrix.piece
             self.hold.piece.position = self.hold.PIECE_POSITION
-            self.hold.piece.minoes_position = self.hold.piece.MINOES_POSITIONS
+            self.hold.piece.minoes_positions = self.hold.piece.MINOES_POSITIONS
             self.hold.piece.hold_enabled = False
             self.hold.refresh()
             
