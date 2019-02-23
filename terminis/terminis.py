@@ -93,10 +93,10 @@ class Tetromino:
         self.fall_timer = None
         self.hold_enabled = True
         
-    def moved(self, potential_position, potential_minoes_positions):
+    def moved(self, movement, potential_minoes_positions):
+        potential_position = self.position + movement
         if self.matrix.shape_fits(potential_position, potential_minoes_positions):
             self.position = potential_position
-            self.minoes_positions = potential_minoes_positions
             self.postpone_lock()
             self.matrix.refresh()
             return True
@@ -104,8 +104,7 @@ class Tetromino:
             return False
 
     def move(self, movement, lock=True):
-        potential_position = self.position + movement
-        if self.moved(potential_position, self.minoes_positions):
+        if self.moved(movement, self.minoes_positions):
             self.rotated_last = False
             return True
         else:
@@ -119,8 +118,8 @@ class Tetromino:
             for mino_position in self.minoes_positions
         )
         for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
-            potential_position = self.position + liberty_degree
-            if self.moved(potential_position, potential_minoes_positions):
+            if self.moved(liberty_degree, potential_minoes_positions):
+                self.minoes_positions = potential_minoes_positions
                 self.orientation = (self.orientation+direction) % 4
                 self.rotated_last = True
                 if rotation_point == 5:
@@ -729,6 +728,12 @@ class Game:
         if self.input_timer:
             self.input_timer = scheduler.cancel(self.input_timer)
         self.stats.save()
+        print("SCORE\t{:n}".format(self.stats.score))
+        print("HIGH\t{:n}".format(self.stats.high_score))
+        t = time.localtime(time.time() - self.stats.time)
+        print("TIME\t%02d:%02d:%02d" % (t.tm_hour-1, t.tm_min, t.tm_sec))
+        print("LEVEL\t%d" % self.stats.level)
+        print("LINES\t%d" % self.stats.lines_cleared)
 
 
 def main():
