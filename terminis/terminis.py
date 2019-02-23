@@ -22,7 +22,7 @@ import subprocess
 
 try:
     import configparser
-except ImportError:
+except ImportError: # Python2
     import ConfigParser as configparser
 
 
@@ -35,11 +35,6 @@ Tetris clone for terminal
   --edit\tedit controls in text editor
   --reset\treset to default controls settings
   --level=n\tstart at level n (integer between 1 and 15)"""
-
-
-locale.setlocale(locale.LC_ALL, '')
-if locale.getpreferredencoding() == 'UTF-8':
-    os.environ["NCURSES_NO_UTF8_ACS"] = "1"
 
 scheduler = sched.scheduler(time.time, lambda delay: curses.napms(int(delay*1000)))
 
@@ -97,18 +92,41 @@ class Tetromino:
         self.lock_timer = None
         self.fall_timer = None
         self.hold_enabled = True
+        
+    def moved(self, potential_position, potential_minoes_positions):
+        if self.matrix.shape_fits(potential_position, potential_minoes_positions):
+            self.position = potential_position
+            self.minoes_positions = potential_minoes_positions
+            self.postpone_lock()
+            self.matrix.refresh()
+            return True
+        else:
+            return False
 
     def move(self, movement, lock=True):
         potential_position = self.position + movement
-        if self.matrix.shape_fits(potential_position, self.minoes_positions):
-            self.position = potential_position
-            self.postpone_lock()
+        if self.moved(potential_position, self.minoes_positions):
             self.rotated_last = False
-            self.matrix.refresh()
             return True
         else:
             if lock and movement == Movement.DOWN:
                 self.locking()
+            return False
+
+    def rotate(self, direction):
+        potential_minoes_positions = tuple(
+            Point(-direction*mino_position.y, direction*mino_position.x)
+            for mino_position in self.minoes_positions
+        )
+        for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
+            potential_position = self.position + liberty_degree
+            if self.moved(potential_position, potential_minoes_positions):
+                self.orientation = (self.orientation+direction) % 4
+                self.rotated_last = True
+                if rotation_point == 5:
+                    self.rotation_point_5_used = True
+                return True
+        else:
             return False
 
     def soft_drop(self):
@@ -123,26 +141,6 @@ class Tetromino:
             lines += 2
         self.matrix.game.stats.piece_dropped(lines)
         self.lock()
-
-    def rotate(self, direction):
-        potential_minoes_positions = tuple(
-            Point(-direction*mino_position.y, direction*mino_position.x)
-            for mino_position in self.minoes_positions
-        )
-        for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
-            potential_position = self.position + liberty_degree
-            if self.matrix.shape_fits(potential_position, potential_minoes_positions):
-                self.orientation = (self.orientation+direction) % 4
-                self.position = potential_position
-                self.minoes_positions = potential_minoes_positions
-                self.postpone_lock()
-                self.rotated_last = True
-                if rotation_point == 5:
-                    self.rotation_point_5_used = True
-                self.matrix.refresh()
-                return True
-        else:
-            return False
 
     def fall(self):
         self.fall_timer = scheduler.enter(self.fall_delay, 2, self.fall, tuple())
@@ -743,6 +741,10 @@ def main():
             controls.edit()
         elif "--edit" in sys.argv[1:]:
             ControlsParser().edit()
+            
+        locale.setlocale(locale.LC_ALL, '')
+        if locale.getpreferredencoding() == 'UTF-8':
+            os.environ["NCURSES_NO_UTF8_ACS"] = "1"
         curses.wrapper(Game)
 
 
