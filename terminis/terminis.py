@@ -57,6 +57,7 @@ class Movement:
     LEFT  = Point(-1, 0)
     RIGHT = Point(1, 0)
     DOWN  = Point(0, 1)
+    STILL = Point(0, 0)
 
 
 class Tetromino:
@@ -93,35 +94,34 @@ class Tetromino:
         self.fall_timer = None
         self.hold_enabled = True
         
-    def moved(self, movement, potential_minoes_positions):
+    def move(self, movement, rotated_minoes_positions=None, lock=False):
         potential_position = self.position + movement
-        if self.matrix.shape_fits(potential_position, potential_minoes_positions):
+        if all(
+            self.matrix.is_free_cell(potential_position+mino_position)
+            for mino_position in rotated_minoes_positions or self.minoes_positions
+        ):
             self.position = potential_position
+            if rotated_minoes_positions:
+                self.minoes_positions = rotated_minoes_positions
+                self.rotated_last = True
+            else:
+                self.rotated_last = False
             self.postpone_lock()
             self.matrix.refresh()
             return True
         else:
-            return False
-
-    def move(self, movement, lock=True):
-        if self.moved(movement, self.minoes_positions):
-            self.rotated_last = False
-            return True
-        else:
-            if lock and movement == Movement.DOWN:
+            if lock and rotated_minoes_positions is None and movement == Movement.DOWN:
                 self.locking()
             return False
 
     def rotate(self, direction):
-        potential_minoes_positions = tuple(
+        rotated_minoes_positions = tuple(
             Point(-direction*mino_position.y, direction*mino_position.x)
             for mino_position in self.minoes_positions
         )
         for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
-            if self.moved(liberty_degree, potential_minoes_positions):
-                self.minoes_positions = potential_minoes_positions
+            if self.move(liberty_degree, rotated_minoes_positions):
                 self.orientation = (self.orientation+direction) % 4
-                self.rotated_last = True
                 if rotation_point == 5:
                     self.rotation_point_5_used = True
                 return True
@@ -157,7 +157,7 @@ class Tetromino:
 
     def lock(self):
         self.lock_timer = None
-        if not self.matrix.shape_fits(self.position+Movement.DOWN, self.minoes_positions):
+        if not self.move(Movement.DOWN):
             if self.fall_timer:
                 self.fall_timer = scheduler.cancel(self.fall_timer)
             self.matrix.lock(self.t_spin())
@@ -294,12 +294,6 @@ class Matrix(Window):
             0 <= position.x < self.NB_COLS
             and position.y < self.NB_LINES
             and not (position.y >= 0 and self.cells[position.y][position.x] is not None)
-        )
-        
-    def shape_fits(self, piece_position, MINOES_POSITIONS):
-        return all(
-            self.is_free_cell(piece_position+mino_position)
-            for mino_position in MINOES_POSITIONS
         )
 
     def lock(self, t_spin):
@@ -643,7 +637,7 @@ class Game:
             
     def start_piece(self):
         self.matrix.piece.position = Matrix.PIECE_POSITION
-        if self.matrix.shape_fits(self.matrix.piece.position, self.matrix.piece.minoes_positions):
+        if self.matrix.piece.move(Movement.STILL, lock=False):
             self.matrix.piece.fall_timer = scheduler.enter(Tetromino.fall_delay, 2, self.matrix.piece.fall, tuple())
             self.matrix.refresh()
         else:
