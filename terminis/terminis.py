@@ -62,25 +62,27 @@ class Scheduler(sched.scheduler, dict):
         sched.scheduler.__init__(self, time.time, time.sleep)
         dict.__init__(self)
         
-    def repeat(self, name, delay, action, args=tuple(), kwargs={}):
-        self[name] = sched.scheduler.enter(self, delay, 1, self._repeat, (name, delay, action, args, kwargs))
+    def repeat(self, name, delay, action, args=tuple()):
+        self[name] = sched.scheduler.enter(self, delay, 1, self._repeat, (name, delay, action, args))
         
-    def _repeat(self, name, delay, action, args, kwargs):
-        self.repeat(name, delay, action, args, kwargs)
-        action(*args, **kwargs)
-        
-    def single_shot(self, name, delay, action, args=tuple(), kwargs={}):
-        self[name] = sched.scheduler.enter(self, delay, 1, self._single_shot, (name, action, args, kwargs))
-        
-    def _single_shot(self, name, action, args, kwargs):
+    def _repeat(self, name, delay, action, args):
         del(self[name])
-        action(*args, **kwargs)
+        self.repeat(name, delay, action, args)
+        action(*args)
+        
+    def single_shot(self, name, delay, action, args=tuple()):
+        self[name] = sched.scheduler.enter(self, delay, 1, self._single_shot, (name, action, args))
+        
+    def _single_shot(self, name, action, args):
+        del(self[name])
+        action(*args)
         
     def cancel(self, name):
-        try:
-            sched.scheduler.cancel(self, self.pop(name))
-        except (KeyError, ValueError):
-            pass
+        if name in self:
+            try:
+                sched.scheduler.cancel(self, self.pop(name))
+            except:
+                sys.exit(name)
 
 
 scheduler = Scheduler()
@@ -118,17 +120,12 @@ class Tetromino:
         self.rotated_last = False
         self.hold_enabled = True
         
-    def can_move(self, movement, minoes_positions):
+    def move_rotate(self, movement, minoes_positions):
         potential_position = self.position + movement
         if all(
             self.matrix.is_free_cell(potential_position+mino_position)
             for mino_position in minoes_positions
         ):
-            return potential_position
-        
-    def move_rotate(self, movement, minoes_positions):
-        potential_position = self.can_move(movement, minoes_positions)
-        if potential_position:
             self.position = potential_position
             if "lock" in scheduler:
                 scheduler.cancel("lock")
@@ -140,7 +137,6 @@ class Tetromino:
     def move(self, movement, lock=True):
         if self.move_rotate(movement, self.minoes_positions):
             self.rotated_last = False
-            self.matrix.refresh()
             return True
         else:
             if (
@@ -149,7 +145,6 @@ class Tetromino:
                 and "lock" not in scheduler
             ):
                 scheduler.single_shot("lock", self.lock_delay, self.matrix.lock)
-                self.matrix.refresh()
             return False
 
     def rotate(self, direction):
@@ -160,7 +155,6 @@ class Tetromino:
         for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
             if self.move_rotate(liberty_degree, rotated_minoes_positions):
                 self.minoes_positions = rotated_minoes_positions
-                self.matrix.refresh()
                 self.orientation = (self.orientation+direction) % 4
                 self.rotated_last = False
                 if rotation_point == 5:
@@ -174,12 +168,15 @@ class Tetromino:
             self.matrix.game.stats.piece_dropped(1)
 
     def hard_drop(self):
-        scheduler.cancel("lock")
         lines = 0
         while self.move(Movement.DOWN, lock=False):
             lines += 2
         self.matrix.game.stats.piece_dropped(lines)
         self.matrix.lock()
+        
+    def fall(self):
+        if self.move(Movement.DOWN):
+            self.matrix.refresh()
 
     def t_spin(self):
         return ""
@@ -318,8 +315,9 @@ class Matrix(Window):
         )
 
     def lock(self):
-        if not self.piece.can_move(Movement.DOWN, self.piece.minoes_positions):
+        if not self.piece.move(Movement.DOWN):
             scheduler.cancel("fall")
+            scheduler.cancel("lock")
             
             t_spin = self.piece.t_spin()
             
@@ -421,8 +419,6 @@ class Stats(Window):
             self.window.addstr(3, 2, "HIGH\t{:n}".format(self.high_score), curses.A_BLINK|curses.A_BOLD)
         else:
             self.window.addstr(3, 2, "HIGH\t{:n}".format(self.high_score))
-        t = time.localtime(time.time() - self.time)
-        self.window.addstr(4, 2, "TIME\t%02d:%02d:%02d" % (t.tm_hour-1, t.tm_min, t.tm_sec))
         self.window.addstr(5, 2, "LEVEL\t%d" % self.level)
         self.window.addstr(6, 2, "GOAL\t%d" % self.goal)
         self.window.addstr(7, 2, "LINES\t%d" % self.lines_cleared)
@@ -430,6 +426,11 @@ class Stats(Window):
         for y, string in enumerate(self.strings, start=start_y):
             x = (self.width-len(string)) // 2 + 1
             self.window.addstr(y, x, string)
+        self.refresh_time()
+        
+    def refresh_time(self):
+        t = time.localtime(time.time() - self.time)
+        self.window.addstr(4, 2, "TIME\t%02d:%02d:%02d" % (t.tm_hour-1, t.tm_min, t.tm_sec))
         self.window.refresh()
 
     def new_level(self):
@@ -631,12 +632,11 @@ class Game:
             self.controls["HARD DROP"]: lambda: self.matrix.piece.hard_drop()
         }
 
-        self.playing = True
         self.paused = False
         self.random_bag = []
         self.next.piece = self.random_piece()
         self.new_piece()
-        scheduler.repeat("clock", 1, self.stats.refresh)
+        scheduler.repeat("time", 1, self.stats.refresh_time)
         scheduler.repeat("input", self.AUTOREPEAT_DELAY, self.process_input)
 
         try:
@@ -656,7 +656,7 @@ class Game:
             self.next.refresh()
         self.matrix.piece.position = Matrix.PIECE_POSITION
         if self.matrix.piece.move(Movement.DOWN):
-            scheduler.repeat("fall", Tetromino.fall_delay, self.matrix.piece.move, (Movement.DOWN,))
+            scheduler.repeat("fall", Tetromino.fall_delay, self.matrix.piece.fall)
             self.matrix.refresh()
         else:
             self.over()
@@ -668,6 +668,7 @@ class Game:
             pass
         else:
             action()
+            self.matrix.refresh()
 
     def pause(self):
         self.stats.time = time.time() - self.stats.time
@@ -702,8 +703,8 @@ class Game:
             self.new_piece()
 
     def over(self):
+        self.stats.time = time.time() - self.stats.time
         self.matrix.refresh()
-        scheduler.cancel("clock")
         if curses.has_colors():
             for tetromino_class in self.TETROMINOES: 
                 curses.init_pair(tetromino_class.COLOR, tetromino_class.COLOR, curses.COLOR_BLACK)
@@ -720,19 +721,19 @@ class Game:
         self.scr.timeout(-1)
         while self.scr.getkey() != self.controls["QUIT"]:
             pass
+        self.stats.time = time.time() - self.stats.time
         self.quit()
 
     def quit(self):
-        self.playing = False
-        for name in tuple(scheduler):
-            scheduler.cancel(name)
         self.stats.save()
-        print("SCORE\t{:n}".format(self.stats.score))
-        print("HIGH\t{:n}".format(self.stats.high_score))
         t = time.localtime(time.time() - self.stats.time)
-        print("TIME\t%02d:%02d:%02d" % (t.tm_hour-1, t.tm_min, t.tm_sec))
-        print("LEVEL\t%d" % self.stats.level)
-        print("LINES\t%d" % self.stats.lines_cleared)
+        sys.exit(
+            "SCORE\t{:n}\n".format(self.stats.score) +
+            "HIGH\t{:n}\n".format(self.stats.high_score) +
+            "TIME\t%02d:%02d:%02d\n" % (t.tm_hour-1, t.tm_min, t.tm_sec) +
+            "LEVEL\t%d\n" % self.stats.level +
+            "LINES\t%d" % self.stats.lines_cleared
+        )
 
 
 def main():
