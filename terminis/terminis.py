@@ -118,16 +118,16 @@ class Tetromino:
         self.rotated_last = False
         self.hold_enabled = True
         
-    def can_move(self, movement, rotated_minoes_positions=None):
+    def can_move(self, movement, minoes_positions):
         potential_position = self.position + movement
         if all(
             self.matrix.is_free_cell(potential_position+mino_position)
-            for mino_position in rotated_minoes_positions or self.minoes_positions
+            for mino_position in minoes_positions
         ):
             return potential_position
         
-    def move_rotate(self, movement, rotated_minoes_positions=None):
-        potential_position = self.can_move(movement, rotated_minoes_positions)
+    def move_rotate(self, movement, minoes_positions):
+        potential_position = self.can_move(movement, minoes_positions)
         if potential_position:
             self.position = potential_position
             if "lock" in scheduler:
@@ -138,7 +138,7 @@ class Tetromino:
             return False
         
     def move(self, movement, lock=True):
-        if self.move_rotate(movement):
+        if self.move_rotate(movement, self.minoes_positions):
             self.rotated_last = False
             self.matrix.refresh()
             return True
@@ -318,7 +318,7 @@ class Matrix(Window):
         )
 
     def lock(self):
-        if not self.piece.can_move(Movement.DOWN):
+        if not self.piece.can_move(Movement.DOWN, self.piece.minoes_positions):
             scheduler.cancel("fall")
             
             t_spin = self.piece.t_spin()
