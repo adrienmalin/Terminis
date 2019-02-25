@@ -36,8 +36,6 @@ class Mino:
 
 
 class Tetromino:
-    INIT_POSITION = Point(4, 0)
-    CAN_ROTATE = True
     SUPER_ROTATION_SYSTEM = (
         {
             Rotation.COUNTERCLOCKWISE: (Point(0, 0), Point(1, 0), Point(1, -1), Point(0, 2), Point(1, 2)),
@@ -65,6 +63,7 @@ class Tetromino:
         self.rotation_point_5_used = False
         self.rotated_last = False
         self.hold_enabled = True
+        self.prelocked = False
 
     def t_spin(self):
         return ""
@@ -73,7 +72,7 @@ class Tetromino:
 class O(Tetromino):
     MINOES_POSITIONS = (Point(0, 0), Point(1, 0), Point(0, -1), Point(1, -1))
     MINOES_TYPE = Mino.O
-    CAN_ROTATE = False
+    SUPER_ROTATION_SYSTEM = tuple()
 
     def _rotate(self, direction):
         return False
@@ -144,6 +143,7 @@ class Tetris:
     FALL_DELAY = 1
     LOCK_DELAY = 0.5
     AUTOSHIFT_DELAY = 0.2
+    INIT_POSITION = Point(4, -1)
     SCORES = (
         {"name": "",       "": 0, "MINI T-SPIN": 1, "T-SPIN": 4},
         {"name": "SINGLE", "": 1, "MINI T-SPIN": 2, "T-SPIN": 8},
@@ -182,6 +182,7 @@ class Tetris:
         self.fall_delay = self.FALL_DELAY
         self.lock_delay = self.LOCK_DELAY
         self.time = time.time()
+        self.current_piece = None
         self.next_level()
         self.new_piece()
 
@@ -195,58 +196,57 @@ class Tetris:
         self.show_text("LEVEL %d" % self.level)
 
     def new_piece(self):
-        self.current_piece = self.next_queue.pop(1)
-        self.next_queue.append(self._random_piece)
-        self.start_piece()
+        if not self.current_piece:
+            self.current_piece = self.next_queue.pop(1)
+            self.next_queue.append(self._random_piece)
+        self.current_piece.position = self.INIT_POSITION
+        if not self.fall():
+            self.game_over()
 
     def hold_piece(self):
         if self.current_piece.hold_enabled:
             self.current_piece, self.hold_piece = self.held_piece, self.current_piece
             self.held_piece.minoes_position = self.held_piece.MINOES_POSITIONS
             self.held_piece.hold_enabled = False
+            self.new_piece()
             
-            if self.matrix.piece:
-                self.start_piece()
-            else:
-                self.new_piece()
-            
-    def start_piece(self):
-        self.current_piece.position = self.INIT_POSITION
-        if not self.shape_fits(self.current_piece.position, self.current_piece.minoes_positions):
-            self.over()
-
-    def _move(self, movement):
+    def _move_rotate(self, movement, minoes_positions):
         potential_position = self.current_piece.position + movement
-        if self.shape_fits(potential_position, self.current_piece.minoes_positions):
-            self.current_piece.position = potential_position
-            self.current_piece.rotated_last = False
-            self.postpone_lock()
+        if all(
+            self.is_free_cell(potential_position+mino_position)
+            for mino_position in minoes_positions
+        ):
+            self.position = potential_position
+            if self.current_piece.prelocked:
+                self.postpone_lock()
             return True
         else:
-            self.prelock()
+            return False
+
+    def _move(self, movement):
+        if self._move_rotate(movement, self.current_piece.minoes_positions):
+            self.current_piece.rotated_last = False
+            return True
+        else:
+            if movement == Movement.DOWN and not self.current_piece.prelocked:
+                self.prelock()
             return False
 
     def _rotate(self, direction):
-        if not self.current_piece.CAN_ROTATE:
-            return False
-            
-        potential_minoes_positions = tuple(
+        rotated_minoes_positions = tuple(
             Point(-direction*mino_position.y, direction*mino_position.x)
             for mino_position in self.minoes_position
         )
         for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
             potential_position = self.position + liberty_degree
-            if self.shape_fits(potential_position, potential_minoes_positions):
+            if self._move_rotate(potential_position, rotated_minoes_positions):
                 self.current_piece.orientation = (self.orientation+direction) % 4
-                self.current_piece.position = potential_position
-                self.current_piece.minoes_position = potential_minoes_positions
+                self.current_piece.minoes_position = rotated_minoes_positions
                 self.current_piece.rotated_last = True
                 if rotation_point == 5:
                     self.current_piece.rotation_point_5_used = True
-                self.postpone_lock()
                 return True
         else:
-            self.prelock()
             return False
         
     def move_left(self):
@@ -285,12 +285,6 @@ class Tetris:
             and not (position.y >= 0 and self.matrix[position.y][position.x] != Mino.NO_MINO)
         )
         
-    def shape_fits(self, piece_position, minoes_positions):
-        return all(
-            self.is_free_cell(piece_position+mino_position)
-            for mino_position in minoes_positions
-        )
-        
     def prelock(self):
         """
         Schedules self.lock in self.lock_delay
@@ -315,7 +309,7 @@ class Tetris:
             if position.y >= 0:
                 self.matrix[position.y][position.x] = self.current_piece.MINOES_TYPE
             else:
-                self.over()
+                self.game_over()
                 return
             
         nb_rows = 0
@@ -324,6 +318,7 @@ class Tetris:
                 self.cells.pop(y)
                 self.cells.insert(0, [Mino.NO_MINO for x in range(self.NB_COLS)])
                 nb_rows += 1
+        self.current_piece = None
         self.piece_locked(nb_rows, t_spin)
 
         if t_spin or nb_rows:
@@ -363,5 +358,5 @@ class Tetris:
     def resume(self):
         self.time = time.time() - self.time
 
-    def over(self):
-        self.show_text("GAME OVER")
+    def game_over(self):
+        self.show_text("GAME game_over")
