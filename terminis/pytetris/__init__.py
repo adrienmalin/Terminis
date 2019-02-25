@@ -1,1 +1,3 @@
-__all__ = []
+from .core import Tetris
+
+__all__ = ["Tetris"]

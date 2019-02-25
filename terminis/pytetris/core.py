@@ -22,7 +22,6 @@ class Movement:
     LEFT  = Point(-1, 0)
     RIGHT = Point(1, 0)
     DOWN  = Point(0, 1)
-    STILL = Point(0, 0)
     
     
 class Mino:
@@ -38,6 +37,7 @@ class Mino:
 
 class Tetromino:
     INIT_POSITION = Point(4, 0)
+    CAN_ROTATE = True
     SUPER_ROTATION_SYSTEM = (
         {
             Rotation.COUNTERCLOCKWISE: (Point(0, 0), Point(1, 0), Point(1, -1), Point(0, 2), Point(1, 2)),
@@ -73,6 +73,7 @@ class Tetromino:
 class O(Tetromino):
     MINOES_POSITIONS = (Point(0, 0), Point(1, 0), Point(0, -1), Point(1, -1))
     MINOES_TYPE = Mino.O
+    CAN_ROTATE = False
 
     def _rotate(self, direction):
         return False
@@ -134,108 +135,55 @@ class Z(Tetromino):
     MINOES_TYPE = Mino.Z
 
 
-class Matrix:
-    NB_COLS = 10
-    NB_ROWS = 40
-    PIECE_POSITION = Point(4, 0)
-
-    def __init__(self):
-        self.cells = [
-            [Mino.NO_MINO for x in range(self.NB_COLS)]
-            for y in range(self.NB_ROWS)
-        ]
-
-    def is_free_cell(self, position):
-        return (
-            0 <= position.x < self.NB_COLS
-            and position.y < self.NB_LINES
-            and not (position.y >= 0 and self.cells[position.y][position.x] != Mino.NO_MINO)
-        )
-
-    def lock(self, piece):
-        for mino_position in piece.minoes_position:
-            position = mino_position + piece.position
-            if position.y >= 0:
-                self.cells[position.y][position.x] = piece.MINOES_TYPE
-            else:
-                return None
-        else:
-            nb_lines_cleared = 0
-            for y, line in enumerate(self.cells):
-                if all(mino for mino in line):
-                    self.cells.pop(y)
-                    self.cells.insert(0, [Mino.NO_MINO for x in range(self.NB_COLS)])
-                    nb_lines_cleared += 1
-            return nb_lines_cleared
-
-
-class Stats(Window):
-        try:
-            with open(self.FILE_PATH, "r") as f:
-               self.high_score = int(f.read())
-        except:
-            self.high_score = 0
-        self.combo = -1
-        self.time = time.time()
-        self.lines_cleared = 0
-        self.clock_timer = None
-        self.strings = []
-        Window.__init__(self, width, height, begin_x, begin_y)
-        self.new_level()
-
-    def refresh(self):
-        self.draw_border()
-        self.window.addstr(2, 2, "SCORE\t{:n}".format(self.score))
-        if self.score >= self.high_score:
-            self.window.addstr(3, 2, "HIGH\t{:n}".format(self.high_score), curses.A_BLINK|curses.A_BOLD)
-        else:
-            self.window.addstr(3, 2, "HIGH\t{:n}".format(self.high_score))
-        t = time.localtime(time.time() - self.time)
-        self.window.addstr(4, 2, "TIME\t%02d:%02d:%02d" % (t.tm_hour-1, t.tm_min, t.tm_sec))
-        self.window.addstr(5, 2, "LEVEL\t%d" % self.level)
-        self.window.addstr(6, 2, "GOAL\t%d" % self.goal)
-        self.window.addstr(7, 2, "LINES\t%d" % self.lines_cleared)
-        start_y = self.height - len(self.strings) - 2
-        for y, string in enumerate(self.strings, start=start_y):
-            x = (self.width-len(string)) // 2 + 1
-            self.window.addstr(y, x, string)
-        self.window.refresh()
-
-
-class Game:
-    AUTOREPEAT_DELAY = 0.02
-    LOCK_DELAY = 0.5
-    FALL_DELAY = 1
+class Tetris:
     TETROMINOES = (O, I, T, L, J, S, Z)
+    LEN_NEXT_QUEUE = 1
+    MATRIX_ROWS = 20
+    MATRIX_COLS = 10
+    INIT_POSITION = Point(4, 0)
+    FALL_DELAY = 1
+    LOCK_DELAY = 0.5
+    AUTOSHIFT_DELAY = 0.2
     SCORES = (
-        {"name": "", "": 0, "MINI T-SPIN": 1, "T-SPIN": 4},
+        {"name": "",       "": 0, "MINI T-SPIN": 1, "T-SPIN": 4},
         {"name": "SINGLE", "": 1, "MINI T-SPIN": 2, "T-SPIN": 8},
         {"name": "DOUBLE", "": 3, "T-SPIN": 12},
         {"name": "TRIPLE", "": 5, "T-SPIN": 16},
         {"name": "TETRIS", "": 8}
     )
-    LEN_NEXT_QUEUE = 1
+    
+    def __init__(self, high_score=0):
+        self.matrix = [
+            [Mino.NO_MINO for x in range(self.MATRIX_ROWS)]
+            for y in range(self.MATRIX_COLS)
+        ]
+        self.high_score = high_score
 
-    def __init__(self, level=1):
-        self.matrix = Matrix()
-        self.paused = False
-        self.start_next_piece()
-        self.score = 0
-        self.level = level - 1
-        self.combo = -1
-        self.random_bag = []
-        self.next_queue = [self.random_piece() for _ in range(self.LEN_NEXT_QUEUE)]
-        self.held_piece = None
-        self.time = time.time()
-        self.playing = True
-        self.next_level()
-        self.new_piece()
-
-    def random_piece(self):
+    def _random_piece(self):
         if not self.random_bag:
             self.random_bag = list(self.TETROMINOES)
             random.shuffle(self.random_bag)
         return self.random_bag.pop()()
+        
+    def new_game(self, level=1):
+        self.matrix.cells = [
+            [Mino.NO_MINO for x in range(self.NB_COLS)]
+            for y in range(self.NB_ROWS)
+        ]
+        self.level = level - 1
+        self.goal = 0
+        self.score = 0
+        self.random_bag = []
+        self.next_queue = [
+            self._random_piece()
+            for _ in range(self.LEN_NEXT_QUEUE)
+        ]
+        self.held_piece = None
+        self.fall_delay = self.FALL_DELAY
+        self.lock_delay = self.LOCK_DELAY
+        self.time = time.time()
+        self.next_level()
+        self.new_piece()
 
     def next_level(self):
         self.level += 1
@@ -244,9 +192,11 @@ class Game:
         if self.level > 15:
             self.lock_delay = 0.5 * pow(0.9, self.level-15)
         self.goal += 5 * self.level
+        self.show_text("LEVEL %d" % self.level)
 
     def new_piece(self):
-        self.current_piece, self.next_piece = self.next_piece, self.random_piece()
+        self.current_piece = self.next_queue.pop(1)
+        self.next_queue.append(self._random_piece)
         self.start_piece()
 
     def hold_piece(self):
@@ -261,105 +211,157 @@ class Game:
                 self.new_piece()
             
     def start_piece(self):
-        self.current_piece.position = self.current_piece.INIT_POSITION
-        if not 
+        self.current_piece.position = self.INIT_POSITION
+        if not self.shape_fits(self.current_piece.position, self.current_piece.minoes_positions):
             self.over()
-        
-    def _possible_position(self, minoes_position, movement):
-        potential_position = self.position + movement
-        if all(
-            self.matrix.is_free_cell(mino_position+potential_position)
-            for mino_position in minoes_position
-        ):
-            return potential_position
-        
-    def piece_blocked(self):
-        return not self.current_piece._possible_position(self.current_piece.minoes_position, Movement.STILL)
 
-    def move(self, movement):
-        possible_position = self._possible_position(self.minoes_position, movement)
-        if possible_position:
-            self.position = possible_position
-            self.rotated_last = False
+    def _move(self, movement):
+        potential_position = self.current_piece.position + movement
+        if self.shape_fits(potential_position, self.current_piece.minoes_positions):
+            self.current_piece.position = potential_position
+            self.current_piece.rotated_last = False
+            self.postpone_lock()
             return True
         else:
+            self.prelock()
             return False
 
-    def rotate(self, direction):
+    def _rotate(self, direction):
+        if not self.current_piece.CAN_ROTATE:
+            return False
+            
         potential_minoes_positions = tuple(
             Point(-direction*mino_position.y, direction*mino_position.x)
             for mino_position in self.minoes_position
         )
         for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
-            possible_position = self._possible_position(potential_minoes_positions, liberty_degree)
-            if possible_position:
-                self.orientation = (self.orientation+direction) % 4
-                self.position = possible_position
-                self.minoes_position = potential_minoes_positions
-                self.rotated_last = True
+            potential_position = self.position + liberty_degree
+            if self.shape_fits(potential_position, potential_minoes_positions):
+                self.current_piece.orientation = (self.orientation+direction) % 4
+                self.current_piece.position = potential_position
+                self.current_piece.minoes_position = potential_minoes_positions
+                self.current_piece.rotated_last = True
                 if rotation_point == 5:
-                    self.rotation_point_5_used = True
+                    self.current_piece.rotation_point_5_used = True
+                self.postpone_lock()
                 return True
+        else:
+            self.prelock()
+            return False
         
     def move_left(self):
-        self.current_piece.move(Movement.LEFT)
+        self._move(Movement.LEFT)
         
     def move_right(self):
-        self.current_piece.move(Movement.RIGHT)
+        self._move(Movement.RIGHT)
 
     def soft_drop(self):
-        if self.current_piece.move(Movement.DOWN):
-            self.score += 1
-        
-    def fall(self):
-        self.current_piece.move(Movement.DOWN)
+        if self._move(Movement.DOWN):
+            self.rows_dropped(1)
 
     def hard_drop(self):
-        while self.current_piece.move(Movement.DOWN):
-            self.score += 2
+        points = 0
+        while self._move(Movement.DOWN):
+            points += 2
+        self.rows_dropped(points)
         self.lock_piece()
+            
+    def rows_dropped(self, points):
+        self.update_score(points, "")
+        
+    def fall(self):
+        self._move(Movement.DOWN)
         
     def rotate_clockwise(self):
-        return self.current_piece.rotate(Rotation.CLOCKWISE)
+        return self.current_piece._rotate(Rotation.CLOCKWISE)
         
     def rotate_counterclockwise(self):
-        return self.current_piece.rotate(Rotation.COUNTERCLOCKWISE)
+        return self.current_piece._rotate(Rotation.COUNTERCLOCKWISE)
+
+    def is_free_cell(self, position):
+        return (
+            0 <= position.x < self.NB_COLS
+            and position.y < self.NB_LINES
+            and not (position.y >= 0 and self.matrix[position.y][position.x] != Mino.NO_MINO)
+        )
+        
+    def shape_fits(self, piece_position, minoes_positions):
+        return all(
+            self.is_free_cell(piece_position+mino_position)
+            for mino_position in minoes_positions
+        )
+        
+    def prelock(self):
+        """
+        Schedules self.lock in self.lock_delay
+        """
+        raise NotImplementedError
+    
+    def postpone_lock(self):
+        """
+        Reset timer calling self.lock to self.lock_delay
+        """
+        raise NotImplementedError
 
     def lock_piece(self):
-        t_spin = self.current_piece.t_spin()
-        nb_lines = self.matrix.lock(self.current_piece)
-        
-        if nb_lines is None:
-            self.over()
+        if self.shape_fits(self.current_piece.position+Movement.DOWN, self.current_piece.minoes_positions):
+            self.postpone_lock()
             return
         
-        if nb_lines:
-            self.combo += 1
-        else:
-            self.combo = -1
+        t_spin = self.current_piece.t_spin()
+        
+        for mino_position in self.current_piece.minoes_position:
+            position = mino_position + self.current_piece.position
+            if position.y >= 0:
+                self.matrix[position.y][position.x] = self.current_piece.MINOES_TYPE
+            else:
+                self.over()
+                return
             
-        if nb_lines or t_spin:
-            ds = self.SCORES[nb_lines][t_spin]
-            self.goal -= ds
-            ds *= 100 * self.level
-            self.score += ds
+        nb_rows = 0
+        for y, row in enumerate(self.cells):
+            if all(mino for mino in row):
+                self.cells.pop(y)
+                self.cells.insert(0, [Mino.NO_MINO for x in range(self.NB_COLS)])
+                nb_rows += 1
+        self.piece_locked(nb_rows, t_spin)
+
+        if t_spin or nb_rows:
+            points = self.SCORES[nb_rows][t_spin]
+            self.goal -= points
+            points *= 100 * self.level
+            text = t_spin
+            if t_spin and nb_rows:
+                text += " "
+            if nb_rows:
+                text += self.SCORES[nb_rows]["name"]
+            self.update_score(points, text)
             
+        self.combo = self.combo + 1 if nb_rows else -1
         if self.combo >= 1:
-            self.strings.append("COMBO x%d" % self.combo)
-            ds = (20 if nb_lines==1 else 50) * self.combo * self.level
-            self.score += ds
-            self.strings.append(str(ds))
-            
+            points = (20 if nb_rows==1 else 50) * self.combo * self.level
+            text = "COMBO x%d" % self.combo
+            self.update_score(points, text)
+        
         if self.goal <= 0:
             self.new_level()
             
+        self.new_piece()
+            
+    def update_score(self, points, text):
+        self.score += points
+        if self.score > self.high_score:
+            self.high_score = self.score
+        self.show_text("%s\n%d" % (text, points))
+        
+    def show_text(self, text):
+        print(text)
+            
     def pause(self):
         self.time = time.time() - self.time
-        self.paused = True
         
     def resume(self):
         self.time = time.time() - self.time
-        self.paused = False
 
     def over(self):
-        self.playing = False
+        self.show_text("GAME OVER")
