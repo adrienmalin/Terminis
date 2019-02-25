@@ -286,6 +286,7 @@ class ControlsWindow(Window, ControlsParser):
         ControlsParser.__init__(self)
         self.read(self.FILE_PATH)
         Window.__init__(self, game, width, height, begin_x, begin_y)
+        self.refresh()
         for action, key in self.items(self.SECTION):
             if key == "SPACE":
                 self[action] = " "
@@ -395,7 +396,6 @@ class Game(Tetris):
         self.hold_window.refresh()
         self.next_window.refresh()
         self.stats_window.refresh()
-        self.controls_window.refresh()
         
         scheduler.repeat("time", 1, self.stats_window.refresh_time)
         scheduler.repeat("input", self.AUTOSHIFT_DELAY, self.process_input)

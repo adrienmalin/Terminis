@@ -205,7 +205,7 @@ class Tetris:
 
     def hold_piece(self):
         if self.current_piece.hold_enabled:
-            self.current_piece, self.hold_piece = self.held_piece, self.current_piece
+            self.current_piece, self.held_piece = self.held_piece, self.current_piece
             self.held_piece.minoes_positions = self.held_piece.MINOES_POSITIONS
             self.held_piece.hold_enabled = False
             self.new_piece()
