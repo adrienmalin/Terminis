@@ -16,6 +16,9 @@ class Point:
 
     def __add__(self, other):
         return Point(self.x+other.x, self.y+other.y)
+    
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
 
 
 class Movement:
@@ -54,11 +57,12 @@ class Tetromino:
             Rotation.CLOCKWISE: (Point(0, 0), Point(-1, 0), Point(-1, 1), Point(0, 2), Point(-1, -2))
         }
     )
-    lock_delay = 0.5
+    INIT_POSITION = Point(4, -1)
+    LOCK_DELAY = 0.5
 
-    def __init__(self, position):
+    def __init__(self):
         self.position = self.INIT_POSITION
-        self.minoes_position = self.MINOES_POSITIONS
+        self.minoes_positions = self.MINOES_POSITIONS
         self.orientation = 0
         self.rotation_point_5_used = False
         self.rotated_last = False
@@ -72,7 +76,7 @@ class Tetromino:
 class O(Tetromino):
     MINOES_POSITIONS = (Point(0, 0), Point(1, 0), Point(0, -1), Point(1, -1))
     MINOES_TYPE = Mino.O
-    SUPER_ROTATION_SYSTEM = tuple()
+    SUPER_ROTATION_SYSTEM = (tuple(),)
 
     def _rotate(self, direction):
         return False
@@ -153,10 +157,6 @@ class Tetris:
     )
     
     def __init__(self, high_score=0):
-        self.matrix = [
-            [Mino.NO_MINO for x in range(self.MATRIX_ROWS)]
-            for y in range(self.MATRIX_COLS)
-        ]
         self.high_score = high_score
 
     def _random_piece(self):
@@ -166,9 +166,9 @@ class Tetris:
         return self.random_bag.pop()()
         
     def new_game(self, level=1):
-        self.matrix.cells = [
-            [Mino.NO_MINO for x in range(self.NB_COLS)]
-            for y in range(self.NB_ROWS)
+        self.matrix = [
+            [Mino.NO_MINO for x in range(self.MATRIX_COLS)]
+            for y in range(self.MATRIX_ROWS)
         ]
         self.level = level - 1
         self.goal = 0
@@ -182,8 +182,8 @@ class Tetris:
         self.fall_delay = self.FALL_DELAY
         self.lock_delay = self.LOCK_DELAY
         self.time = time.time()
-        self.current_piece = None
         self.next_level()
+        self.current_piece = None
         self.new_piece()
 
     def next_level(self):
@@ -197,16 +197,16 @@ class Tetris:
 
     def new_piece(self):
         if not self.current_piece:
-            self.current_piece = self.next_queue.pop(1)
-            self.next_queue.append(self._random_piece)
+            self.current_piece = self.next_queue.pop(0)
+            self.next_queue.append(self._random_piece())
         self.current_piece.position = self.INIT_POSITION
-        if not self.fall():
+        if not self._move(Movement.DOWN):
             self.game_over()
 
     def hold_piece(self):
         if self.current_piece.hold_enabled:
             self.current_piece, self.hold_piece = self.held_piece, self.current_piece
-            self.held_piece.minoes_position = self.held_piece.MINOES_POSITIONS
+            self.held_piece.minoes_positions = self.held_piece.MINOES_POSITIONS
             self.held_piece.hold_enabled = False
             self.new_piece()
             
@@ -235,12 +235,12 @@ class Tetris:
     def _rotate(self, direction):
         rotated_minoes_positions = tuple(
             Point(-direction*mino_position.y, direction*mino_position.x)
-            for mino_position in self.minoes_position
+            for mino_position in self.current_piece.minoes_positions
         )
-        for rotation_point, liberty_degree in enumerate(self.SUPER_ROTATION_SYSTEM[self.orientation][direction], start=1):
+        for rotation_point, liberty_degree in enumerate(self.current_piece.SUPER_ROTATION_SYSTEM[self.current_piece.orientation][direction], start=1):
             potential_position = self.position + liberty_degree
             if self._move_rotate(potential_position, rotated_minoes_positions):
-                self.current_piece.orientation = (self.orientation+direction) % 4
+                self.current_piece.orientation = (self.current_piece.orientation+direction) % 4
                 self.current_piece.minoes_position = rotated_minoes_positions
                 self.current_piece.rotated_last = True
                 if rotation_point == 5:
@@ -273,15 +273,15 @@ class Tetris:
         self._move(Movement.DOWN)
         
     def rotate_clockwise(self):
-        return self.current_piece._rotate(Rotation.CLOCKWISE)
+        return self._rotate(Rotation.CLOCKWISE)
         
     def rotate_counterclockwise(self):
-        return self.current_piece._rotate(Rotation.COUNTERCLOCKWISE)
+        return self._rotate(Rotation.COUNTERCLOCKWISE)
 
     def is_free_cell(self, position):
         return (
-            0 <= position.x < self.NB_COLS
-            and position.y < self.NB_LINES
+            0 <= position.x < self.MATRIX_COLS
+            and position.y < self.MATRIX_ROWS
             and not (position.y >= 0 and self.matrix[position.y][position.x] != Mino.NO_MINO)
         )
         
@@ -359,4 +359,4 @@ class Tetris:
         self.time = time.time() - self.time
 
     def game_over(self):
-        self.show_text("GAME game_over")
+        self.show_text("GAME OVER")

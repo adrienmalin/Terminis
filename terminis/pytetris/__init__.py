@@ -1,3 +1,3 @@
-from .core import Tetris
+from .core import Tetris, Mino, Point
 
-__all__ = ["Tetris"]
+__all__ = ["Tetris", "Mino", "Point"]
