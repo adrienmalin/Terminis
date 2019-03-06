@@ -1,7 +1,11 @@
 # Terminis
 Tetris clone for terminal. Ideal for servers without GUI!
 
-## Install
+## Requirements
+
+[Python 2 or 3](https://www.python.org/)
+
+## Installation
 
 ```bash
 pip install --user terminis
