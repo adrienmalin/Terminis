@@ -79,11 +79,7 @@ class Scheduler(sched.scheduler, dict):
         
     def cancel(self, name):
         if name in self:
-            try:
-                sched.scheduler.cancel(self, self.pop(name))
-            except:
-                sys.exit(name)
-
+            sched.scheduler.cancel(self, self.pop(name))
 
 scheduler = Scheduler()
 
@@ -134,9 +130,11 @@ class Tetromino:
         else:
             return False
         
-    def move(self, movement, lock=True):
+    def move(self, movement, lock=True, refresh=True):
         if self.move_rotate(movement, self.minoes_positions):
             self.rotated_last = False
+            if refresh:
+                self.matrix.refresh()
             return True
         else:
             if (
@@ -145,6 +143,7 @@ class Tetromino:
                 and "lock" not in scheduler
             ):
                 scheduler.single_shot("lock", self.lock_delay, self.matrix.lock)
+                self.matrix.refresh()
             return False
 
     def rotate(self, direction):
@@ -159,6 +158,7 @@ class Tetromino:
                 self.rotated_last = False
                 if rotation_point == 5:
                     self.rotation_point_5_used = True
+                self.matrix.refresh()
                 return True
         else:
             return False
@@ -169,14 +169,14 @@ class Tetromino:
 
     def hard_drop(self):
         lines = 0
-        while self.move(Movement.DOWN, lock=False):
+        while self.move(Movement.DOWN, lock=False, refresh=False):
             lines += 2
+        self.matrix.refresh()
         self.matrix.game.stats.piece_dropped(lines)
         self.matrix.lock()
         
     def fall(self):
-        if self.move(Movement.DOWN):
-            self.matrix.refresh()
+        self.move(Movement.DOWN)
 
     def t_spin(self):
         return ""
@@ -317,7 +317,6 @@ class Matrix(Window):
     def lock(self):
         if not self.piece.move(Movement.DOWN):
             scheduler.cancel("fall")
-            scheduler.cancel("lock")
             
             t_spin = self.piece.t_spin()
             
@@ -651,6 +650,7 @@ class Game:
         return self.random_bag.pop()(self.matrix, Next.PIECE_POSITION)
 
     def new_piece(self):
+        scheduler.cancel("lock")
         if not self.matrix.piece:
             self.matrix.piece, self.next.piece = self.next.piece, self.random_piece()
             self.next.refresh()
@@ -668,7 +668,6 @@ class Game:
             pass
         else:
             action()
-            self.matrix.refresh()
 
     def pause(self):
         self.stats.time = time.time() - self.stats.time
