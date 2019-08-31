@@ -11,7 +11,7 @@ You can install it on Windows with:
 pip install --user windows-curses"""
     )
 else:
-    curses.COLOR_ORANGE = 8
+    curses.COLOR_ORANGE = curses.COLOR_WHITE
     
 import random
 import sched
