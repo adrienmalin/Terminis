@@ -155,7 +155,7 @@ class Tetromino:
             if self.move_rotate(liberty_degree, rotated_minoes_positions):
                 self.minoes_positions = rotated_minoes_positions
                 self.orientation = (self.orientation+direction) % 4
-                self.rotated_last = False
+                self.rotated_last = True
                 if rotation_point == 5:
                     self.rotation_point_5_used = True
                 self.matrix.refresh()
