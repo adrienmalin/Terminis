@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
+import subprocess
+import psutil
 
 try:
     import curses
@@ -21,9 +24,9 @@ import locale
 import subprocess
 
 try:
-    import configparser
+    from configparser import ConfigParser
 except ImportError: # Python2
-    import ConfigParser as configparser
+    from ConfigParser import SafeConfigParser as ConfigParser
 
 
 DIR_NAME = "Terminis"
@@ -31,10 +34,10 @@ HELP_MSG = """terminis [options]
 
 Tetris clone for terminal
 
-  --help\tshow command usage (this message)
-  --edit\tedit controls in text editor
-  --reset\treset to default controls settings
-  --level=n\tstart at level n (integer between 1 and 15)"""
+  --help\t-h\tshow command usage (this message)
+  --edit\t-e\tedit controls in text editor
+  --reset\t-r\treset to default controls settings
+  --level=n\t\tstart at level n (integer between 1 and 15)"""
 
 
 class Rotation:
@@ -492,7 +495,7 @@ class Stats(Window):
             print(e)
 
 
-class ControlsParser(configparser.SafeConfigParser):
+class ControlsParser(ConfigParser):
     FILE_NAME = "config.cfg"
     if sys.platform == "win32":
         DIR_PATH = os.environ.get("appdata", os.path.expanduser("~\Appdata\Roaming"))
@@ -522,7 +525,7 @@ class ControlsParser(configparser.SafeConfigParser):
     }
 
     def __init__(self):
-        configparser.SafeConfigParser.__init__(self)
+        ConfigParser.__init__(self)
         self.optionxform = str
         self.add_section(self.SECTION)
         for action, key in self.DEFAULTS.items():
@@ -581,6 +584,23 @@ class ControlsWindow(Window, ControlsParser):
         self.window.refresh()
 
 
+class Music:
+    PATH = "music.sh"
+
+    def __init__(self):
+        self.process = None
+
+    def play(self):
+        self.process = subprocess.Popen(["sh", self.PATH])
+
+    def stop(self):
+        if self.process:
+            for proc in psutil.Process(self.process.pid).children(recursive=True):
+                proc.terminate()
+            self.process.terminate()
+            self.process = None
+
+
 class Game:
     WIDTH = 80
     HEIGHT = Matrix.HEIGHT
@@ -618,6 +638,7 @@ class Game:
         self.next = Next(side_width, right_x, top_y)
         self.stats = Stats(self, side_width, side_height, left_x, bottom_y)
         self.controls = ControlsWindow(side_width, side_height, right_x, bottom_y)
+        self.music = Music()
 
         self.actions = {
             self.controls["QUIT"]: self.quit,
@@ -637,6 +658,7 @@ class Game:
         self.new_piece()
         scheduler.repeat("time", 1, self.stats.refresh_time)
         scheduler.repeat("input", self.AUTOREPEAT_DELAY, self.process_input)
+        self.music.play()
 
         try:
             scheduler.run()
@@ -676,6 +698,7 @@ class Game:
         self.matrix.refresh(paused=True)
         self.next.refresh(paused=True)
         self.scr.timeout(-1)
+        self.music.stop()
         
         while True:
             key = self.scr.getkey()
@@ -683,12 +706,14 @@ class Game:
                 self.quit()
                 break
             elif key == self.controls["PAUSE"]:
-                self.scr.timeout(0)
-                self.hold.refresh()
-                self.matrix.refresh()
-                self.next.refresh()
-                self.stats.time = time.time() - self.stats.time
                 break
+
+        self.scr.timeout(0)
+        self.hold.refresh()
+        self.matrix.refresh()
+        self.next.refresh()
+        self.stats.time = time.time() - self.stats.time
+        self.music.play()
 
     def swap(self):
         if self.matrix.piece.hold_enabled:
@@ -726,6 +751,7 @@ class Game:
     def quit(self):
         self.stats.save()
         t = time.localtime(time.time() - self.stats.time)
+        self.music.stop()
         sys.exit(
             "SCORE\t{:n}\n".format(self.stats.score) +
             "HIGH\t{:n}\n".format(self.stats.high_score) +
@@ -736,14 +762,14 @@ class Game:
 
 
 def main():
-    if "--help" in sys.argv[1:] or "/?" in sys.argv[1:]:
+    if "--help" in sys.argv[1:] or "-h" in sys.argv[1:] or "/?" in sys.argv[1:]:
         print(HELP_MSG)
     else:
-        if "--reset" in sys.argv[1:]:
+        if "--reset" in sys.argv[1:] or "-r" in sys.argv[1:]:
             controls = ControlsParser()
             controls.reset()
             controls.edit()
-        elif "--edit" in sys.argv[1:]:
+        elif "--edit" in sys.argv[1:] or "-e" in sys.argv[1:]:
             ControlsParser().edit()
             
         locale.setlocale(locale.LC_ALL, '')
