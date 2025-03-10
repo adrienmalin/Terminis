@@ -3,6 +3,7 @@
 import sys
 import os
 import subprocess
+import psutil
 
 try:
     import curses
@@ -584,7 +585,7 @@ class ControlsWindow(Window, ControlsParser):
 
 
 class Music:
-    PATH = "music.sh"
+    PATH = os.path.join(os.path.dirname(__file__), "music.sh")
 
     def __init__(self):
         self.process = None
@@ -594,7 +595,8 @@ class Music:
 
     def stop(self):
         if self.process:
-            subprocess.run(['pkill', '-P', str(self.process.pid)])
+            for proc in psutil.Process(self.process.pid).children(recursive=True):
+                proc.terminate()
             self.process.terminate()
             self.process = None
 
