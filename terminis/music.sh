@@ -13,7 +13,7 @@ C8=-f4186; Db8=-f4434; D8=-f4698; Eb8=-f4978; E8=-f5274; F8=-f5587; Gb8=-f5919; 
 dc=-l100; dcp=-l150; c=-l200; cp=-l300; n=-l400; np=-l600; b=-l800; bp=-l1200; r=-l1600
 
 if command -v beep > /dev/null; then
-  while true; do
+  while [ $? -eq 0 ]; do
     beep $n $E5 -n $c $B4 -n $c $C5 -n $c $D5 -n $dc $E5 -n $dc $D5 -n $c $C5 -n $c $B4 \
       -n $n $A4 -n $c $A4 -n $c $C5 -n $n $E5 -n $c $D5 -n $c $C5 \
       -n $c $B4 -n $c $E4 -n $c $Ab4 -n $c $C5 -n $n $D5 -n $n $E5 \
@@ -31,6 +31,6 @@ if command -v beep > /dev/null; then
       -n $c $B4 -n $c $E4 -n $c $Ab4 -n $c $C5 -n $n $D5 -n $n $E5 \
       -n $n $C5 -n $n $A4 -n $b $A4 \
       -n $b $E5 -n $b $C5 -n $b $D5 -n $b $B4 -n $b $C5 -n $b $A4 -n $b $Ab4 -n $c $B4 -n $c $E4 -n $c $Ab4 -n $c $B4 \
-      -n $b $E5 -n $b $C5 -n $b $D5 -n $b $B4 -n $n $C5 -n $n $E5 -n $n $A5 -n $n $A5 -n $r $Ab5
+      -n $b $E5 -n $b $C5 -n $b $D5 -n $b $B4 -n $n $C5 -n $n $E5 -n $n $A5 -n $n $A5 -n $r $Ab5 > /dev/null
   done
 fi

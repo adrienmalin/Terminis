@@ -376,7 +376,7 @@ class Stats(Window):
     TITLE = "STATS"
     FILE_NAME = ".high_score"
     if sys.platform == "win32":
-        DIR_PATH = os.environ.get("appdata", os.path.expanduser("~\Appdata\Roaming"))
+        DIR_PATH = os.environ.get("appdata", os.path.expanduser(r"~\Appdata\Roaming"))
     else:
         DIR_PATH = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
     DIR_PATH = os.path.join(DIR_PATH, DIR_NAME)
@@ -498,7 +498,7 @@ class Stats(Window):
 class ControlsParser(ConfigParser):
     FILE_NAME = "config.cfg"
     if sys.platform == "win32":
-        DIR_PATH = os.environ.get("appdata", os.path.expanduser("~\Appdata\Roaming"))
+        DIR_PATH = os.environ.get("appdata", os.path.expanduser(r"~\Appdata\Roaming"))
     else:
         DIR_PATH = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
     DIR_PATH = os.path.join(DIR_PATH, DIR_NAME)
