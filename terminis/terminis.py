@@ -3,7 +3,6 @@
 import sys
 import os
 import subprocess
-import psutil
 
 try:
     import curses
@@ -595,8 +594,7 @@ class Music:
 
     def stop(self):
         if self.process:
-            for proc in psutil.Process(self.process.pid).children(recursive=True):
-                proc.terminate()
+            subprocess.run(['pkill', '-P', str(self.process.pid)])
             self.process.terminate()
             self.process = None
 
