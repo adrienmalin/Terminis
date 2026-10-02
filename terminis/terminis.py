@@ -3,7 +3,6 @@
 import sys
 import os
 import subprocess
-import psutil
 
 try:
     import curses
@@ -25,9 +24,11 @@ import subprocess
 
 try:
     from configparser import ConfigParser
-except ImportError: # Python2
-    from ConfigParser import SafeConfigParser as ConfigParser
-
+except ImportError:
+    try:
+        from configparser import SafeConfigParser as ConfigParser
+    except ImportError: # Python2
+        import ConfigParser
 
 DIR_NAME = "Terminis"
 HELP_MSG = """terminis [options]
@@ -254,7 +255,8 @@ class Window:
     def __init__(self, width, height, begin_x, begin_y):
         self.window = curses.newwin(height, width, begin_y, begin_x)
         if self.TITLE:
-            self.title_begin_x = (width-len(self.TITLE)) // 2 + 1
+            self.title = "[" + self.TITLE + "]"
+            self.title_begin_x = (width-len(self.title)) // 2 + 1
         self.piece = None
         self.refresh()
 
@@ -262,7 +264,7 @@ class Window:
         self.window.erase()
         self.window.border()
         if self.TITLE:
-            self.window.addstr(0, self.title_begin_x, self.TITLE, curses.A_BOLD)
+            self.window.addstr(0, self.title_begin_x, self.title, curses.A_BOLD)
 
     def draw_piece(self):
         if self.piece:
@@ -282,8 +284,8 @@ class Window:
 class Matrix(Window):
     NB_COLS = 10
     NB_LINES = 21
-    WIDTH = NB_COLS*2+2
-    HEIGHT = NB_LINES+1
+    WIDTH = NB_COLS*2 + 2
+    HEIGHT = NB_LINES + 1
     PIECE_POSITION = Point(4, -1)
     TITLE = ""
 
@@ -418,7 +420,7 @@ class Stats(Window):
         self.draw_border()
         self.window.addstr(2, 2, "SCORE\t{:n}".format(self.score))
         if self.score >= self.high_score:
-            self.window.addstr(3, 2, "HIGH\t{:n}".format(self.high_score), curses.A_BLINK|curses.A_BOLD)
+            self.window.addstr(3, 2, "HIGH\t{:n}".format(self.high_score), curses.A_BLINK | curses.A_BOLD)
         else:
             self.window.addstr(3, 2, "HIGH\t{:n}".format(self.high_score))
         self.window.addstr(5, 2, "LEVEL\t%d" % self.level)
@@ -426,7 +428,7 @@ class Stats(Window):
         self.window.addstr(7, 2, "LINES\t%d" % self.lines_cleared)
         start_y = self.height - len(self.strings) - 2
         for y, string in enumerate(self.strings, start=start_y):
-            x = (self.width-len(string)) // 2 + 1
+            x = (self.width - len(string)) // 2 + 1
             self.window.addstr(y, x, string)
         self.refresh_time()
         
@@ -506,9 +508,9 @@ class ControlsParser(ConfigParser):
     SECTION = "CONTROLS"
     COMMENT = """# You can change key below.
 # Acceptable values are:
-# `SPACE`, `TAB`, `ENTER`,
-# printable characters (`q`, `*`...) (case sensitive),
-# curses's constants name starting with `KEY_`
+# - `SPACE`, `TAB`, `ENTER`,
+# - printable characters (`q`, `*`...) (case sensitive),
+# - curses's constants name starting with `KEY_`
 # See https://docs.python.org/3/library/curses.html?highlight=curses#constants
 
 """
@@ -585,20 +587,30 @@ class ControlsWindow(Window, ControlsParser):
 
 
 class Music:
-    PATH = os.path.join(os.path.dirname(__file__), "music.sh")
-
     def __init__(self):
         self.process = None
 
     def play(self):
-        self.process = subprocess.Popen(["sh", self.PATH])
+        try:
+            self.process = subprocess.Popen(["beep", "-l400", "-f659", "-n", "-l200", "-f493", "-n", "-l200", "-f523", "-n", "-l200", "-f587", "-n", "-l100", "-f659", "-n", "-l100", "-f587", "-n", "-l200", "-f523", "-n", "-l200", "-f493", "-n", "-l400", "-f440", "-n", "-l200", "-f440", "-n", "-l200", "-f523", "-n", "-l400", "-f659", "-n", "-l200", "-f587", "-n", "-l200", "-f523", "-n", "-l200", "-f493", "-n", "-l200", "-f329", "-n", "-l200", "-f415", "-n", "-l200", "-f523", "-n", "-l400", "-f587", "-n", "-l400", "-f659", "-n", "-l400", "-f523", "-n", "-l400", "-f440", "-n", "-l400", "-f440", "-n", "-l200", "-f246", "-n", "-l200", "-f261", "-n", "-l600", "-f587", "-n", "-l200", "-f698", "-n", "-l200", "-f880", "-n", "-l100", "-f880", "-n", "-l100", "-f880", "-n", "-l200", "-f783", "-n", "-l200", "-f698", "-n", "-l400", "-f659", "-n", "-l200", "-f659", "-n", "-l200", "-f523", "-n", "-l200", "-f659", "-n", "-l100", "-f698", "-n", "-l100", "-f659", "-n", "-l200", "-f587", "-n", "-l200", "-f523", "-n", "-l200", "-f493", "-n", "-l200", "-f329", "-n", "-l200", "-f415", "-n", "-l200", "-f523", "-n", "-l400", "-f587", "-n", "-l400", "-f659", "-n", "-l400", "-f523", "-n", "-l400", "-f440", "-n", "-l800", "-f440", "-n", "-l400", "-f659", "-n", "-l200", "-f493", "-n", "-l200", "-f523", "-n", "-l200", "-f587", "-n", "-l100", "-f659", "-n", "-l100", "-f587", "-n", "-l200", "-f523", "-n", "-l200", "-f493", "-n", "-l400", "-f440", "-n", "-l200", "-f440", "-n", "-l200", "-f523", "-n", "-l400", "-f659", "-n", "-l200", "-f587", "-n", "-l200", "-f523", "-n", "-l200", "-f493", "-n", "-l200", "-f329", "-n", "-l200", "-f415", "-n", "-l200", "-f523", "-n", "-l400", "-f587", "-n", "-l400", "-f659", "-n", "-l400", "-f523", "-n", "-l400", "-f440", "-n", "-l400", "-f440", "-n", "-l200", "-f246", "-n", "-l200", "-f261", "-n", "-l600", "-f587", "-n", "-l200", "-f698", "-n", "-l200", "-f880", "-n", "-l100", "-f880", "-n", "-l100", "-f880", "-n", "-l200", "-f783", "-n", "-l200", "-f698", "-n", "-l400", "-f659", "-n", "-l200", "-f659", "-n", "-l200", "-f523", "-n", "-l200", "-f659", "-n", "-l100", "-f698", "-n", "-l100", "-f659", "-n", "-l200", "-f587", "-n", "-l200", "-f523", "-n", "-l200", "-f493", "-n", "-l200", "-f329", "-n", "-l200", "-f415", "-n", "-l200", "-f523", "-n", "-l400", "-f587", "-n", "-l400", "-f659", "-n", "-l400", "-f523", "-n", "-l400", "-f440", "-n", "-l800", "-f440", "-n", "-l800", "-f329", "-n", "-l800", "-f261", "-n", "-l800", "-f293", "-n", "-l800", "-f246", "-n", "-l800", "-f261", "-n", "-l800", "-f220", "-n", "-l800", "-f207", "-n", "-l200", "-f246", "-n", "-l200", "-f164", "-n", "-l200", "-f207", "-n", "-l200", "-f246", "-n", "-l800", "-f329", "-n", "-l800", "-f261", "-n", "-l800", "-f293", "-n", "-l800", "-f246", "-n", "-l400", "-f261", "-n", "-l400", "-f329", "-n", "-l400", "-f440", "-n", "-l400", "-f440", "-n", "-l1600", "-f415"])
+        except FileNotFoundError:
+            pass
+        else:
+            scheduler.repeat("music", 0.02, self.repeat)
+
+    def repeat(self):
+        if self.process:
+            if self.process.poll() is not None:
+                self.play()
+        else:
+            scheduler.cancel("music")
+        
 
     def stop(self):
         if self.process:
-            for proc in psutil.Process(self.process.pid).children(recursive=True):
-                proc.terminate()
             self.process.terminate()
             self.process = None
+            scheduler.cancel("music")
 
 
 class Game:
@@ -612,12 +624,12 @@ class Game:
             curses.start_color()
             if curses.can_change_color():
                 curses.init_color(curses.COLOR_YELLOW, 1000, 500, 0)
-            for tetromino_class in self.TETROMINOES: 
-                curses.init_pair(tetromino_class.COLOR, tetromino_class.COLOR, curses.COLOR_WHITE)
-                if tetromino_class.COLOR == curses.COLOR_ORANGE:
-                    tetromino_class.color_pair = curses.color_pair(curses.COLOR_YELLOW)
+            for tetromino in self.TETROMINOES: 
+                curses.init_pair(tetromino.COLOR, tetromino.COLOR, curses.COLOR_WHITE)
+                if tetromino.COLOR == curses.COLOR_ORANGE:
+                    tetromino.color_pair = curses.color_pair(curses.COLOR_YELLOW)
                 else:
-                    tetromino_class.color_pair = curses.color_pair(tetromino_class.COLOR)|curses.A_BOLD
+                    tetromino.color_pair = curses.color_pair(tetromino.COLOR) | curses.A_BOLD
         try:
             curses.curs_set(0)
         except curses.error:
@@ -728,30 +740,27 @@ class Game:
 
     def over(self):
         self.stats.time = time.time() - self.stats.time
-        self.matrix.refresh()
         if curses.has_colors():
-            for tetromino_class in self.TETROMINOES: 
-                curses.init_pair(tetromino_class.COLOR, tetromino_class.COLOR, curses.COLOR_BLACK)
-        for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES//2):
-            for x, syllable in enumerate(word, start=Matrix.NB_COLS//2-1):
+            for tetromino in self.TETROMINOES:
+                curses.init_pair(tetromino.COLOR, tetromino.COLOR, curses.COLOR_BLACK if tetromino.COLOR == curses.COLOR_YELLOW else curses.COLOR_WHITE)
+        for y, word in enumerate((("GA", "ME") ,("OV", "ER")), start=Matrix.NB_LINES // 2):
+            for x, syllable in enumerate(word, start=Matrix.NB_COLS//2 - 1):
                 color = self.matrix.cells[y][x]
-                if color is None:
-                    color = curses.COLOR_BLACK
-                else:
-                    color |= curses.A_REVERSE
-                self.matrix.window.addstr(y, x*2+1, syllable, color)
+                self.matrix.window.addstr(y, 2*x + 1, syllable, (color | curses.A_REVERSE) if color else curses.COLOR_BLACK)
         self.matrix.window.refresh()
         curses.beep()
         self.scr.timeout(-1)
+        self.music.stop()
+
         while self.scr.getkey() != self.controls["QUIT"]:
             pass
-        self.stats.time = time.time() - self.stats.time
+
         self.quit()
 
     def quit(self):
         self.stats.save()
-        t = time.localtime(time.time() - self.stats.time)
         self.music.stop()
+        t = time.localtime(time.time() - self.stats.time)
         sys.exit(
             "SCORE\t{:n}\n".format(self.stats.score) +
             "HIGH\t{:n}\n".format(self.stats.high_score) +
